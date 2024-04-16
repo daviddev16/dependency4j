@@ -8,17 +8,6 @@ import com.dependency4j.util.StrUtil;
 
 import java.util.*;
 
-/**
- *
- * <b>DependencySearchTree</b> is a specific Tree structure responsible for
- * storing data of java class and interface hierarchy. The tree is used
- * for searching and matching class types to their respective singleton
- * instances.
- *
- * @author David Duarte Pinheiro
- * @version 1.0
- *
- **/
 public final class DependencySearchTree {
 
     private final RootNode rootNode;

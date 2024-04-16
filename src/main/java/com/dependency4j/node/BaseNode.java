@@ -8,8 +8,7 @@ import java.util.Set;
 /**
  *
  * <b>BaseNode</b> as the name says, it is a base implementation
- * of a node in the tree.
- * Provides a common {@link Set} instance
+ * of a node in the tree. Provides a common {@link Set} instance
  * that can be used by the subclasses of {@link BaseNode}.
  *
  * @see SingletonNode

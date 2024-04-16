@@ -57,8 +57,7 @@ public final class DependencyManager {
         }
     }
 
-    private long computeTimestamp(long startTime, String timestampLabel,
-                                  Map<String, Long> timestampMap){
+    private long computeTimestamp(long startTime, String timestampLabel, Map<String, Long> timestampMap) {
 
         long lastTime = System.currentTimeMillis();
         timestampMap.put(timestampLabel, lastTime - startTime);

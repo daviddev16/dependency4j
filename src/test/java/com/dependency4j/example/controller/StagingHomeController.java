@@ -8,7 +8,7 @@ import com.dependency4j.example.service.IMessagingService;
 @Managed(
         strategy = @Strategy({"Staging"})
 )
-public class StagingHomeController implements  IHomeController {
+public class StagingHomeController extends Home {
 
     private final IMessagingService messagingService;
 
@@ -26,4 +26,8 @@ public class StagingHomeController implements  IHomeController {
         return "Staging";
     }
 
+    @Override
+    public String getHomeName() {
+        return "StagingHome";
+    }
 }

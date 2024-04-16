@@ -5,6 +5,6 @@ public enum NodeType {
     ROOT,
     INTERFACE,
     SUPERCLASS,
-    IMPLEMENTATION;
+    IMPLEMENTATION
 
 }
