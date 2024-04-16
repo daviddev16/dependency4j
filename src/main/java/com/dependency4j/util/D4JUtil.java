@@ -1,4 +1,7 @@
-package com.dependency4j;
+package com.dependency4j.util;
+
+import com.dependency4j.AbstractNode;
+import com.dependency4j.DependencySearchTree;
 
 public final class D4JUtil {
 

@@ -1,5 +1,7 @@
 package com.dependency4j;
 
+import com.dependency4j.util.Checks;
+
 public record QueryOptions(boolean retrieveAnyways, String filteredClassName) {
 
     public static final class QueryOptionsBuilder {
@@ -26,8 +28,16 @@ public record QueryOptions(boolean retrieveAnyways, String filteredClassName) {
 
     }
 
+    public static QueryOptions byName(String filteredClassName) {
+        return builder()
+                .filterByName(filteredClassName)
+                .build();
+    }
+
     public static QueryOptions none() {
-        return QueryOptions.builder().build();
+        return QueryOptions
+                .builder()
+                .build();
     }
 
     public static QueryOptionsBuilder builder() {

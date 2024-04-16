@@ -1,4 +1,4 @@
-package com.dependency4j;
+package com.dependency4j.node;
 
 
 public final class JavaTypeNode extends BaseNode {

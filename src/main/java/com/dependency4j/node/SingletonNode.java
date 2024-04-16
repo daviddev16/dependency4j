@@ -1,21 +1,28 @@
-package com.dependency4j;
+package com.dependency4j.node;
+
+import com.dependency4j.AbstractNode;
 
 import java.util.Collections;
 import java.util.Set;
 
+/**
+ *
+ * <b>SingletonNode</b> represents the node that holds the object
+ * instance. The object instance is also called the dependency object.
+ *
+ * @author David Duarte Pinheiro
+ * @version 1.0
+ *
+ **/
 public class SingletonNode implements AbstractNode {
 
-    private final Object nodeSingletonInstance;
+    private Object nodeSingletonInstance;
     private final String nodeName;
+    private Class<?> classType;
 
-    public SingletonNode(Object nodeSingletonInstance, String nodeName) {
-        this.nodeSingletonInstance = nodeSingletonInstance;
+    public SingletonNode(Class<?> classType, String nodeName) {
+        this. classType = classType;
         this.nodeName = nodeName;
-    }
-
-    public Class<?> getNodeSingletonClassType() {
-        return (nodeSingletonInstance != null) ?
-                nodeSingletonInstance.getClass() : null;
     }
 
     @Override
@@ -23,8 +30,16 @@ public class SingletonNode implements AbstractNode {
         throw new IllegalStateException("SingletonNode cannot have child.");
     }
 
+    public Class<?> getNodeSingletonClassType() {
+        return classType;
+    }
+
     public Object getNodeSingletonInstance() {
         return nodeSingletonInstance;
+    }
+
+    public void setNodeSingletonInstance(Object nodeSingletonInstance) {
+        this.nodeSingletonInstance = nodeSingletonInstance;
     }
 
     @Override

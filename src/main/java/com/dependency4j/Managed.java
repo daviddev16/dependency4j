@@ -13,10 +13,8 @@ public @interface Managed {
 
     Strategy strategy() default @Strategy({"none"});
 
-    /**
-     * disposable é usado para definir se a criação da classe será realizada mesmo se não estiver dentro da estrategia
-     * de dependencias.
-     **/
     boolean disposable() default true;
+
+    boolean injectable() default true;
 
 }

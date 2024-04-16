@@ -1,4 +1,4 @@
-package com.dependency4j;
+package com.dependency4j.util;
 
 public final class StrUtil {
 
