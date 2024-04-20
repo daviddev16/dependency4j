@@ -81,8 +81,16 @@ public final class DependencyManager {
         }
     }
 
+    @SuppressWarnings("Unchecked")
     private <T> T instantiateWithInjection(Class<T> classType) {
         try {
+
+            SingletonNode classTypeSingletonNode = dependencySearchTree
+                    .querySingletonNode(classType, QueryOptions.none());
+
+            if (classTypeSingletonNode != null && classTypeSingletonNode.getNodeInstance() != null)
+                return (T) classTypeSingletonNode.getNodeInstance();
+
             Constructor<?> constructorAnnotatedWithPull = getConstructorAnnotatedWithPull(classType);
             Object newInstanceOfType;
 
@@ -117,8 +125,8 @@ public final class DependencyManager {
     private List<Object> createObjectsFromParameters(Class<?> parentClassType,
                                                      AccessibleObject accessibleObject, Parameter[] parameters) {
         return Stream.of(parameters)
-                .map(parameter ->
-                        fetchOrCreateObjectFromClassType(parentClassType, parameter.getType(), accessibleObject))
+                .map(parameter
+                        -> fetchOrCreateObjectFromClassType(parentClassType, parameter.getType(), accessibleObject))
                 .collect(Collectors.toList());
     }
 
