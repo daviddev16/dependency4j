@@ -4,14 +4,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.github.dependency4j</groupId>
-    <artifactId>dependency4j</artifactId>
-    <version>1.0-SNAPSHOT</version>
-    <packaging>jar</packaging>
-
     <name>Dependency4j</name>
     <description>A lightweight Java library designed for Inverse of Control and Dependency Injection management</description>
     <url>http://github.com/daviddev16/dependency4j</url>
+
+    <groupId>io.github.dependency4j</groupId>
+    <artifactId>dependency4j</artifactId>
+    <version>1.0</version>
+    <packaging>jar</packaging>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -19,21 +19,34 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <scm>
-        <url>https://github.com/daviddev16/dependency4j/issues</url>
-        <connection>scm:git:git://github.com/daviddev16/dependency4j.git</connection>
-    </scm>
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/license/mit</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>David Duarte Pinheiro</name>
+            <email>davidduartepinheiro@gmail.com</email>
+            <organization>com.github.daviddev16</organization>
+            <url>https://github.com/daviddev16</url>
+        </developer>
+    </developers>
 
     <issueManagement>
         <url>https://github.com/daviddev16/dependency4j/issues</url>
         <system>GitHub Issues</system>
     </issueManagement>
 
-    <developers>
-        <developer>
-            <email>davidduartepinheiro at gmail</email>
-        </developer>
-    </developers>
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/daviddev16/dependency4j</url>
+        </repository>
+    </distributionManagement>
 
     <dependencies>
         <dependency>
@@ -59,26 +72,45 @@
     <build>
         <plugins>
             <plugin>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.1.2</version>
-            </plugin>
-            <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>3.1.2</version>
             </plugin>
+            <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                    </execution>
-                </executions>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.1.0</version>
             </plugin>
+            <!-- default lifecycle, jar packaging: see https://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.0.2</version>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.0</version>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.22.1</version>
+            </plugin>
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+            </plugin>
+            <plugin>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>3.1.1</version>
+            </plugin>
+            <plugin>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>3.1.1</version>
+            </plugin>
+            <!-- site lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#site_Lifecycle -->
+            <plugin>
+                <artifactId>maven-site-plugin</artifactId>
+                <version>3.12.1</version>
+            </plugin>
+
         </plugins>
     </build>
 
