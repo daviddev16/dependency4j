@@ -10,7 +10,7 @@
 
     <groupId>io.github.dependency4j</groupId>
     <artifactId>dependency4j</artifactId>
-    <version>1.0</version>
+    <version>1.0.1</version>
     <packaging>jar</packaging>
 
     <properties>
