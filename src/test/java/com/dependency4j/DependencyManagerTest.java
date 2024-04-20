@@ -2,26 +2,33 @@ package com.dependency4j;
 
 import com.dependency4j.example.controller.Home;
 import com.dependency4j.example.controller.IHomeController;
+import com.dependency4j.example.controller.ProductionHomeController;
 import com.dependency4j.example.controller.StagingHomeController;
 import com.dependency4j.example.service.IMessagingService;
 
+import com.dependency4j.example.service.MessagingServiceImpl;
+import com.dependency4j.util.D4JUtil;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class InitialDependencyManagerTest {
+@DisplayName("Base core DI & IoC test with no strategy")
+public class DependencyManagerTest {
 
     private final DependencyManager dependencyManager;
 
     private @Pull IMessagingService messagingService;
 
-    public InitialDependencyManagerTest()
+    public DependencyManagerTest()
     {
-        dependencyManager = new DependencyManager();
-        dependencyManager.install("com.dependency4j.example");
-        dependencyManager.installSingleInstance(this);
+        dependencyManager = DependencyManager.builder()
+                .strategy("Testing")
+                .install("com.dependency4j.example")
+                .prepare(this)
+                .getDependencyManager();
     }
 
     @Test
@@ -38,6 +45,16 @@ public class InitialDependencyManagerTest {
         assertEquals("Staging", homeController.environmentName());
         assertEquals("Hello from Staging!", homeController.helloMessage());
 
+    }
+
+    @Test
+    public void testMessageServiceMatching() {
+
+        IMessagingService messagingService
+                = dependencyManager.query(IMessagingService.class);
+
+        Assertions.assertNotNull(messagingService);
+        Assertions.assertEquals(MessagingServiceImpl.class, messagingService.getClass());
     }
 
     @Test

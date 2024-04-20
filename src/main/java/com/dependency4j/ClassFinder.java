@@ -15,7 +15,6 @@ public class ClassFinder {
 
     public static Set<Class<?>> scanPackage(String parentPackageName)
             throws IOException, ClassNotFoundException {
-
         return scanPackage(parentPackageName, true);
     }
 

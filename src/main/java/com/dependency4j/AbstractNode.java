@@ -2,6 +2,7 @@ package com.dependency4j;
 
 import com.dependency4j.node.*;
 
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -10,8 +11,7 @@ import java.util.Set;
  * {@link DependencySearchTree}.Each node has a Set of children and its
  * {@link NodeType}.
  *
- * @author David Duarte Pinheiro
- * @version 1.0
+ * @author daviddev16
  *
  **/
 public interface AbstractNode {
@@ -39,8 +39,8 @@ public interface AbstractNode {
 
     /**
      *
-     * The current node type.Use to defer Interfaces, Classes, the root node
-     * and the instance node, also named {@link SingletonNode}.
+     * The current node type. Use to differentiate Interfaces, Classes, the
+     * root node and the instance node, also named {@link SingletonNode}.
      *
      * @since 1.0
      *
@@ -58,20 +58,18 @@ public interface AbstractNode {
 
         if (this instanceof JavaTypeNode javaTypeNode)
             return String.format("%s (%s)",
-                    javaTypeNode.getNodeClassType().getSimpleName(),
+                    javaTypeNode.getNodeClassType().getName(),
                     javaTypeNode.getNodeType().name());
 
         else if (this instanceof RootNode rootNode)
             return String.format("Root (%d)", hashCode());
 
         else if (this instanceof SingletonNode singletonNode) {
-            return String.format("Singleton of {%s:%d} -> {%s}",
-                    singletonNode.getNodeSingletonClassType().getSimpleName(),
-                    hashCode(),
-                    singletonNode.getNodeSingletonInstance());
+            return String.format("Singleton of {%s} with instance {%s}",
+                    singletonNode.getNodeClassType().getName(),
+                    Objects.toString(singletonNode.getNodeInstance(), "<no instance>"));
         }
 
         return toString();
     }
-
 }

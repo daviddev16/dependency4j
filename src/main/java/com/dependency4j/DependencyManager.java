@@ -1,68 +1,85 @@
 package com.dependency4j;
 
+import com.dependency4j.exception.ClassCreationFailedException;
+import com.dependency4j.exception.InstallationFailedException;
+import com.dependency4j.exception.MemberInjectionFailedException;
 import com.dependency4j.node.SingletonNode;
 import com.dependency4j.util.Checks;
+import com.dependency4j.util.StrUtil;
 
-import java.io.IOException;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ *
+ * <b>DependencyManager</b> is the main core manager class. This class
+ * has a {@link DependencySearchTree}, it handles the insertion by scanning
+ * the classes from an arbitrary package path. This class is responsible for
+ * finding and instantiating classes annotated with {@link Managed} annotation.
+ * The class propagates the dependencies through the instantiation of an object.
+ * It supports three types of dependency injection:
+ *
+ *  1. Constructor injection;
+ *  2. Method invocation injection;
+ *  3. Field injection;
+ *
+ * @author daviddev16
+ * @version 1.0
+ *
+ **/
 public final class DependencyManager {
 
     private final DependencySearchTree dependencySearchTree;
+    private final Set<String> strategySet;
+
+    public static DependencyManagerChainBuilder builder() {
+        return new DependencyManagerChainBuilder();
+    }
 
     public DependencyManager() {
-        this.dependencySearchTree = new DependencySearchTree();
+        dependencySearchTree = new DependencySearchTree();
+        strategySet          = new HashSet<>();
+    }
+
+    public Object installSingleInstance(Object object) {
+        Checks.nonNull(object, "object must not be null.");
+        performMethodAndFieldInjection(object);
+        return object;
+    }
+
+    public <T> T installType(Class<T> classType) {
+        Checks.nonNull(classType, "classType must not be null.");
+        return instantiateWithInjection(classType);
+    }
+
+    public <T> T query(Class<? extends T> classType, QueryOptions queryOptions) {
+        return dependencySearchTree.query(classType, queryOptions);
+    }
+    public <T> T query(Class<? extends T> classType) {
+        return query(classType, QueryOptions.none());
     }
 
     public void install(String packageName) {
-        Map<String, Long> timestamps = new HashMap<>(3);
         try {
-
-            long startTime = System.currentTimeMillis();
+            Checks.nonNull(packageName, "packageName must not be null.");
 
             Set<Class<?>> managedClassSet = ClassFinder.scanPackage(packageName)
                     .stream()
                     .filter(classType -> classType.isAnnotationPresent(Managed.class))
+                    .filter(this::validateClassStrategyFilter)
                     .collect(Collectors.toSet());
 
-            startTime = computeTimestamp(startTime, "Package scan time", timestamps);
-
             managedClassSet.forEach(dependencySearchTree::insert);
-
-            startTime = computeTimestamp(startTime, "Tree insertion time", timestamps);
 
             managedClassSet.stream()
                     .filter(classType -> !classType.isInterface())
                     .forEach(this::instantiateWithInjection);
 
-            computeTimestamp(startTime, "Dependency injection and instatiation time", timestamps);
-
-            final StringBuilder stringBuilder = new StringBuilder();
-
-            for (Map.Entry<String, Long> entries : timestamps.entrySet()) {
-                stringBuilder
-                        .append(" [")
-                        .append(entries.getKey()).append(": ")
-                        .append(entries.getValue()).append(" ms")
-                        .append("] ");
-            }
-
-            System.out.println(stringBuilder);
-
-        } catch (IOException | ClassNotFoundException e) {
-            throw new RuntimeException(e);
+        } catch (Exception exception) {
+            throw new InstallationFailedException(packageName, exception);
         }
-    }
-
-    private long computeTimestamp(long startTime, String timestampLabel, Map<String, Long> timestampMap) {
-
-        long lastTime = System.currentTimeMillis();
-        timestampMap.put(timestampLabel, lastTime - startTime);
-
-        return lastTime;
     }
 
     private <T> T instantiateWithInjection(Class<T> classType) {
@@ -71,8 +88,14 @@ public final class DependencyManager {
             Object newInstanceOfType;
 
             if(constructorAnnotatedWithPull != null) {
-                List<Object> listOfValues = createObjectsFromConstructor(classType, constructorAnnotatedWithPull);
-                newInstanceOfType = constructorAnnotatedWithPull.newInstance(listOfValues.toArray());
+
+                Parameter[] constructorParameters = constructorAnnotatedWithPull.getParameters();
+
+                List<Object> listOfCreatedObjects =
+                        createObjectsFromParameters(classType, constructorAnnotatedWithPull, constructorParameters);
+
+                newInstanceOfType = constructorAnnotatedWithPull.newInstance(listOfCreatedObjects.toArray());
+
             } else {
                 newInstanceOfType = createInstanceWithEmptyConstructorFromClassType(classType);
             }
@@ -80,56 +103,53 @@ public final class DependencyManager {
             if (newInstanceOfType == null)
                 throw new IllegalStateException("Could not created a instance to " + classType.getSimpleName());
 
-            performClassFieldInjection(newInstanceOfType);
-            performMethodInvokeInjection(newInstanceOfType);
+            performFieldInjection(newInstanceOfType);
+            performSetterMethodInvocationInjection(newInstanceOfType);
 
             dependencySearchTree.propagateSingletonInstanceToNodes(classType, newInstanceOfType);
 
             return (T) newInstanceOfType;
 
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            throw new RuntimeException(e);
+        } catch (InvocationTargetException | IllegalAccessException | InstantiationException exception) {
+            throw new ClassCreationFailedException(classType, exception);
         }
     }
 
-    private List<Object> createObjectsFromConstructor(Class<?> parentClassType, Constructor<?> constructor) {
-
-        List<Object> instantiatedValues = new ArrayList<>();
-
-        for (Parameter parameter : constructor.getParameters()) {
-
-            Class<?> parameterClassType = parameter.getType();
-
-            QueryOptions queryOptions = AnnotationTransformer
-                    .transformPullAnnotationToQueryOptions(constructor.getAnnotation(Pull.class));
-
-            SingletonNode singletonNode = dependencySearchTree
-                    .querySingletonNode(parameterClassType, queryOptions);
-
-            if (singletonNode == null)
-                continue;
-
-            Object instanceValue = singletonNode.getNodeSingletonInstance();
-
-            if (instanceValue == null) {
-
-                instanceValue = instantiateWithInjection(singletonNode.getNodeSingletonClassType());
-
-                if (parentClassType.equals(singletonNode.getNodeSingletonClassType()))
-                    throw new ScanFailedException("\"" + parentClassType.getSimpleName() +
-                            "\" loops itself on field: \"" + constructor.getName() + "\".");
-
-            }
-
-            instantiatedValues.add(instanceValue);
-        }
-
-        return instantiatedValues;
-
+    private List<Object> createObjectsFromParameters(Class<?> parentClassType,
+                                                     AccessibleObject accessibleObject, Parameter[] parameters) {
+        return Stream.of(parameters)
+                .map(parameter ->
+                        fetchOrCreateObjectFromClassType(parentClassType, parameter.getType(), accessibleObject))
+                .collect(Collectors.toList());
     }
 
-    private Object fetchOrCreateObjectFromClassType(Class<?> parentClassType,
-                                                    Class<?> subjectClassType, AccessibleObject accessibleObject) {
+    /**
+     *
+     * This method is used to fetch/retrieve a valid object for the {@code subjectClassType}
+     * required on the current injection type.
+     *
+
+     *
+     *
+     * @param parentClassType the parent instantiated object class type.
+     *
+     * @param subjectClassType The class type relative to the member that is being injected.
+     *                         To a field injection, this is equals to {@link Field#getType()},
+     *                         and to a method invoke injection, this is equals to the current
+     *                         parameter type that is being fetched and injected, equals to
+     *                         {@link Parameter#getType()}.
+     *
+     * @param accessibleObject The member that is being injected. The value can be a {@link Method},
+     *                         {@link Field} or {@link Constructor} reference, it depends on the type
+     *                         of current injection that invokes this method.
+     *
+     * @return assignable object for {@code subjectClassType}. Returns null if no {@link SingletonNode}
+     *         is found on the {@link DependencySearchTree}.
+     *
+     * @since 1.0
+     * */
+    private Object fetchOrCreateObjectFromClassType(Class<?> parentClassType, Class<?> subjectClassType,
+                                                    AccessibleObject accessibleObject) {
 
         Pull pullAnnotation = accessibleObject.getAnnotation(Pull.class);
 
@@ -143,27 +163,20 @@ public final class DependencyManager {
         if (singletonNode == null)
             return null;
 
-        if (parentClassType.equals(singletonNode.getNodeSingletonClassType()))
-            throw new ScanFailedException("\"" + parentClassType.getSimpleName() +
-                    "\" loops itself on field: \"" + accessibleObject + "\".");
+        if (parentClassType.equals(singletonNode.getNodeClassType()))
+            throw new IllegalStateException("\"" + parentClassType.getSimpleName() +
+                    "\" loops itself on member: \"" + accessibleObject + "\".");
 
 
-        Object instanceValue = singletonNode.getNodeSingletonInstance();
+        Object instanceValue = singletonNode.getNodeInstance();
 
         return (instanceValue != null) ? instanceValue :
-                instantiateWithInjection(singletonNode.getNodeSingletonClassType());
-    }
-
-    private List<Object> createObjectsFromParameters(Class<?> parentClassType,
-                                                     AccessibleObject accessibleObject, Parameter[] parameters) {
-        return Stream.of(parameters)
-                .map(parameter ->
-                        fetchOrCreateObjectFromClassType(parentClassType, parameter.getType(), accessibleObject))
-                .collect(Collectors.toList());
+                instantiateWithInjection(singletonNode.getNodeClassType());
     }
 
     @SuppressWarnings("Unchecked")
-    private Object createInstanceWithEmptyConstructorFromClassType(Class<?> classType) {
+    private Object createInstanceWithEmptyConstructorFromClassType(Class<?> classType)
+            throws InvocationTargetException, InstantiationException, IllegalAccessException {
 
         Constructor<?>[] constructors = classType.getConstructors();
         Constructor<?> emptyConstructor = null;
@@ -177,63 +190,78 @@ public final class DependencyManager {
         if (emptyConstructor == null)
             return null;
 
-        try {
-            return emptyConstructor.newInstance();
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            throw new RuntimeException(e);
-        }
+        return emptyConstructor.newInstance();
     }
 
-    private void performClassFieldInjection(Object object) {
+    private void performFieldInjection(Object object) throws MemberInjectionFailedException {
 
-        Class<?> classType = object.getClass();
+        Class<?> parentClassType = object.getClass();
 
-        for (Field field : classType.getDeclaredFields()) {
+        for (Field field : parentClassType.getDeclaredFields()) {
 
             if (!field.isAnnotationPresent(Pull.class))
                 continue;
 
+            Class<?> fieldClassType = field.getType();
+
+            Object objectFromClassType =
+                    fetchOrCreateObjectFromClassType(parentClassType, fieldClassType, field);
+
+            if (!field.canAccess(object))
+                field.setAccessible(true);
+
             try {
-                Class<?> fieldClassType = field.getType();
-
-                Object objectFromClassType =
-                        fetchOrCreateObjectFromClassType(classType, fieldClassType, field);
-
-                if (!field.canAccess(object))
-                    field.setAccessible(true);
-
                 field.set(object, objectFromClassType);
-
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
+            } catch (IllegalAccessException cause) {
+                throw new MemberInjectionFailedException(field, parentClassType, cause);
             }
-
         }
     }
 
-    private void performMethodInvokeInjection(Object object) {
+    private void performSetterMethodInvocationInjection(Object object) throws MemberInjectionFailedException {
 
-        Class<?> classType = object.getClass();
+        Class<?> parentClassType = object.getClass();
 
-        for (Method method : classType.getDeclaredMethods()) {
-            if (method.isAnnotationPresent(Pull.class)) {
+        for (Method method : parentClassType.getDeclaredMethods()) {
 
-                if (!method.getName().startsWith("set"))
-                    continue;
+            if (!method.isAnnotationPresent(Pull.class) || !method.getName().startsWith("set"))
+                continue;
 
-                Parameter[] parameters = method.getParameters();
+            Parameter[] parameters = method.getParameters();
 
-                List<Object> instantiatedValues =
-                        createObjectsFromParameters(classType, method, parameters);
+            List<Object> instantiatedValues =
+                    createObjectsFromParameters(parentClassType, method, parameters);
 
-                try {
-                    method.invoke(object, instantiatedValues.toArray());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
+            try {
+                method.invoke(object, instantiatedValues.toArray());
+            } catch (IllegalAccessException | InvocationTargetException cause) {
+                throw new MemberInjectionFailedException(method, parentClassType, cause);
             }
         }
+    }
+
+    private boolean validateClassStrategyFilter(Class<?> classType) {
+
+        Managed managedAnnotation = classType.getAnnotation(Managed.class);
+        boolean flagInstanceAnyways = !managedAnnotation.disposable();
+
+        /*
+         * if no strategy was defined, all managed classes
+         * should be instantiated.
+         */
+        if (strategySet.isEmpty())
+            return true;
+
+        Strategy strategyAnn = managedAnnotation.strategy();
+
+        for (String classStrategyName : strategyAnn.value()) {
+            for (String strategyName : strategySet) {
+                if (classStrategyName.equals(strategyName))
+                    return true;
+            }
+        }
+
+        return flagInstanceAnyways;
     }
 
     private Constructor<?> getConstructorAnnotatedWithPull(Class<?> classType) {
@@ -244,20 +272,22 @@ public final class DependencyManager {
                 .orElse(null);
     }
 
-    public Object installSingleInstance(Object object) {
-        Checks.nonNull(object, "object must not be null.");
-        performClassFieldInjection(object);
-        performMethodInvokeInjection(object);
-        return object;
+    public void addStrategy(String... strategies) {
+        Arrays.stream(strategies)
+                .map(strategyName -> Checks.nonNullOrBlank(strategyName, "The strategy name must not be null."))
+                .forEach(strategySet::add);
     }
 
-    public <T> T installSingle(Class<T> classType) {
-        Checks.nonNull(classType, "classType must not be null.");
-        return instantiateWithInjection(classType);
+    private void performMethodAndFieldInjection(Object object) {
+        performFieldInjection(object);
+        performSetterMethodInvocationInjection(object);
     }
 
     public DependencySearchTree getDependencySearchTree() {
         return dependencySearchTree;
     }
 
+    public Set<String> getStrategies() {
+        return strategySet;
+    }
 }

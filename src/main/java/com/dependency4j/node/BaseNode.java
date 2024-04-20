@@ -7,16 +7,16 @@ import java.util.Set;
 
 /**
  *
- * <b>BaseNode</b> as the name says, it is a base implementation
- * of a node in the tree. Provides a common {@link Set} instance
- * that can be used by the subclasses of {@link BaseNode}.
+ * <b>BaseNode</b> as the name says, it is a base implementation of a
+ * {@link AbstractNode} for the tree nodes. Provides a common {@link Set}
+ * instance that can be used by the subclasses of {@link BaseNode} to
+ * store their children.
  *
  * @see SingletonNode
  * @see JavaTypeNode
  * @see RootNode
  *
- * @author David Duarte Pinheiro
- * @version 1.0
+ * @author daviddev16
  *
  **/
 public abstract class BaseNode implements AbstractNode {

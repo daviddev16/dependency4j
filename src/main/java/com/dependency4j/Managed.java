@@ -15,6 +15,4 @@ public @interface Managed {
 
     boolean disposable() default true;
 
-    boolean injectable() default true;
-
 }

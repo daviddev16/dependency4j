@@ -5,31 +5,30 @@ import com.dependency4j.Pull;
 import com.dependency4j.Strategy;
 import com.dependency4j.example.service.IMessagingService;
 
-import java.io.File;
-
 @Managed(
-        strategy = @Strategy({"Staging", "Testing"})
+        strategy = @Strategy({"Production"})
 )
-public class StagingHomeController extends Home {
+public class ProductionHomeController extends Home {
 
     private final IMessagingService messagingService;
 
-    public @Pull StagingHomeController(IMessagingService messagingService, File file) {
+    public @Pull ProductionHomeController(IMessagingService messagingService) {
         this.messagingService = messagingService;
     }
 
     @Override
     public String helloMessage() {
-        return messagingService.getMessageByClassType(StagingHomeController.class);
+        return messagingService
+                .getMessageByClassType(ProductionHomeController.class);
     }
 
     @Override
     public String environmentName() {
-        return "Staging";
+        return "Production";
     }
 
     @Override
     public String getHomeName() {
-        return "StagingHome";
+        return "ProductionHome";
     }
 }
