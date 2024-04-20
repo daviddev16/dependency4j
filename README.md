@@ -25,9 +25,9 @@ provide a service locator pattern design in your application.
 
 ## How it works?
 
-Dependency4j works by mapping all classes in a package that are annotated with `@Managed` and their 
-respective interfaces and superclasses in a tree called `DependencySearchTree`. Insertion only occurs
-if the `@Managed` annotation contains strategies that can be matched with the `DependencyManager` 
+The way Dependency4j works is that it maps all classes in a package that are marked with `@Managed`
+and their respective interfaces and superclasses in a tree called `DependencySearchTree`. Insertion 
+only occurs if the `@Managed` annotation contains strategies that can be matched with the `DependencyManager` 
 strategies. If no strategy is specified in the dependency manager, the class will be instantiated
 without restriction. When a class is instantiated it starts the dependency injection propagation through
 all classes.
