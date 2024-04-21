@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+@DisplayName("Checks the uniqueness of singleton instances")
 public class UniquenessInstanceTest {
 
     @Test
@@ -28,7 +29,6 @@ public class UniquenessInstanceTest {
 
         Product productA = productService.findProductByName("ProductA");
         Assertions.assertNotNull(productA);
-
     }
 
 }

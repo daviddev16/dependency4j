@@ -28,7 +28,7 @@ import java.util.stream.Stream;
  * @version 1.0
  *
  **/
-public final class DependencyManager {
+public @Managed final class DependencyManager {
 
     private final DependencySearchTree dependencySearchTree;
     private final Set<String> strategySet;
@@ -45,6 +45,9 @@ public final class DependencyManager {
     public Object installSingleInstance(Object object) {
         Checks.nonNull(object, "object must not be null.");
         performMethodAndFieldInjection(object);
+        final Class<?> objClassType = object.getClass();
+        dependencySearchTree.insert(objClassType);
+        dependencySearchTree.propagateSingletonInstanceToNodes(objClassType, object);
         return object;
     }
 
@@ -56,6 +59,7 @@ public final class DependencyManager {
     public <T> T query(Class<? extends T> classType, QueryOptions queryOptions) {
         return dependencySearchTree.query(classType, queryOptions);
     }
+    
     public <T> T query(Class<? extends T> classType) {
         return query(classType, QueryOptions.none());
     }
