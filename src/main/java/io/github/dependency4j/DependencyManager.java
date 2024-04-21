@@ -28,7 +28,8 @@ import java.util.stream.Stream;
  * @version 1.0
  *
  **/
-public @Managed final class DependencyManager {
+@Managed(dynamic = true)
+public final class DependencyManager {
 
     private final DependencySearchTree dependencySearchTree;
     private final Set<String> strategySet;
@@ -42,13 +43,19 @@ public @Managed final class DependencyManager {
         strategySet          = new HashSet<>();
     }
 
-    public Object installSingleInstance(Object object) {
+    public Object installSingleInstance(Object object, boolean standalone) {
         Checks.nonNull(object, "object must not be null.");
         performMethodAndFieldInjection(object);
-        final Class<?> objClassType = object.getClass();
-        dependencySearchTree.insert(objClassType);
-        dependencySearchTree.propagateSingletonInstanceToNodes(objClassType, object);
+        if (!standalone) {
+            final Class<?> objClassType = object.getClass();
+            dependencySearchTree.insert(objClassType);
+            dependencySearchTree.propagateSingletonInstanceToNodes(objClassType, object);
+        }
         return object;
+    }
+
+    public Object installSingleInstance(Object object) {
+        return installSingleInstance(object, false);
     }
 
     public <T> T installType(Class<T> classType) {
