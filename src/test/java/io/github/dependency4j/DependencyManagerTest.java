@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @DisplayName("Base core DI & IoC test with no strategy")
-public class DependencyManagerTest {
+public @Managed class DependencyManagerTest {
 
     private final DependencyManager dependencyManager;
 
