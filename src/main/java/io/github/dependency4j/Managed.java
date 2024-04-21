@@ -15,4 +15,6 @@ public @interface Managed {
 
     boolean disposable() default true;
 
+    boolean dynamic() default false;
+
 }
