@@ -256,6 +256,9 @@ public @Managed final class DependencyManager {
         Managed managedAnnotation = classType.getAnnotation(Managed.class);
         boolean flagInstanceAnyways = !managedAnnotation.disposable();
 
+        if (managedAnnotation.dynamic())
+            return false;
+
         /*
          * if no strategy was defined, all managed classes
          * should be instantiated.
