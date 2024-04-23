@@ -24,7 +24,7 @@ public @Managed class DependencyManagerTest {
     {
         dependencyManager = DependencyManager.builder()
                 .strategy("Testing")
-                .install("io.github.dependency4j.example")
+                .installPackage("io.github.dependency4j.example")
                 .prepare(this)
                 .getDependencyManager();
     }

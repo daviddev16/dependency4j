@@ -17,7 +17,7 @@ public class UniquenessInstanceTest {
         /* it should fails on dependency4j <= 1.0.0 */
 
         DependencyManager dependencyManager = DependencyManager.builder()
-                .install("io.github.dependency4j.example.v2")
+                .installPackage("io.github.dependency4j.example.v2")
                 .getDependencyManager();
 
         InMemorySetup inMemorySetup = dependencyManager.query(InMemorySetup.class);

@@ -19,7 +19,7 @@ public class MethodInjectionTest {
         DependencyManager dependencyManager = DependencyManager
                 .builder()
                 .strategy("dirtyStrategy")
-                .install("io.github.dependency4j.example.injection.method")
+                .installPackage("io.github.dependency4j.example.injection.method")
                 .getDependencyManager();
 
         Environment environment = dependencyManager.query(Environment.class);
@@ -42,7 +42,7 @@ public class MethodInjectionTest {
         DependencyManager dependencyManager = DependencyManager
                 .builder()
                 .strategy("cleanStrategy")
-                .install("io.github.dependency4j.example.injection.method")
+                .installPackage("io.github.dependency4j.example.injection.method")
                 .getDependencyManager();
 
         Environment environment = dependencyManager.query(Environment.class);
