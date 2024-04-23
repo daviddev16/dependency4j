@@ -8,8 +8,8 @@ import java.util.Set;
 
 /**
  *
- * <b>SingletonNode</b> represents the node that holds the object
- * instance. The object instance is also called the dependency object.
+ * <b>SingletonNode</b> represents the node that holds the object instance.
+ * The object instance is also called the dependency object.
  *
  * @author daviddev16
  *
