@@ -17,7 +17,7 @@ public class StrategyTest {
     {
         final DependencyManager dependencyManager = DependencyManager.builder()
                 .strategy("Production")
-                .install(TEST_EXAMPLE_PACKAGE)
+                .installPackage(TEST_EXAMPLE_PACKAGE)
                 .getDependencyManager();
 
         IHomeController productionController =

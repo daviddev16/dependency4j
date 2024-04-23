@@ -21,14 +21,14 @@ public final class DependencyManagerChainBuilder {
         return this;
     }
 
-    public DependencyManagerChainBuilder install(String packageName) {
-        dependencyManager.install(packageName);
+    public DependencyManagerChainBuilder installPackage(String packageName) {
+        dependencyManager.installPackage(packageName);
         return this;
     }
 
     public DependencyManagerChainBuilder prepare(Object object) {
         Checks.nonNull(object, "object must not be null.");
-        dependencyManager.installSingleInstance(object);
+        dependencyManager.installInstance(object);
         return this;
     }
 
