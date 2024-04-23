@@ -39,14 +39,14 @@ all classes.
 <p align="center"><i>We can write a test that simulates the sequence diagram shown in the figure above</i></p> 
 
 ````java
-    @Test
+@Test
 @DisplayName("Demonstration unit test")
 void demonstrateSequenceDiagramTest() {
 
    /* 1. Creating and installing the DependencyManager */
    DependencyManager dependencyManager = DependencyManager.builder()
            .strategy("Staging")
-           .install("com.dependency4j.example")
+           .installPackage("com.dependency4j.example")
            .getDependencyManager();
 
    /* 2. Fetching the IProductRepository implementation and testing */
@@ -58,7 +58,7 @@ void demonstrateSequenceDiagramTest() {
    MyProductService myProductService = new MyProductService();
 
    /* -!- MyProductService contains a dependency object of IProductRepository, we should test it later  -!- */
-   dependencyManager.installSingleInstance(myProductService);
+   dependencyManager.installInstance(myProductService);
 
    /* 4. Testing if the IProductRepository dependency was injected in MyProductService instance */
    IProductRepository productRepositoryFromMyService = myProductService.getProductRepository();
@@ -173,7 +173,7 @@ public class QuickDependencyManagerTest {
    public QuickDependencyManagerTest() {
       dependencyManager = DependencyManager.builder()
               .strategy("Testing")
-              .install("com.dependency4j.example")
+              .installPackage("com.dependency4j.example")
               .prepare(this)
               .getDependencyManager();
    }
