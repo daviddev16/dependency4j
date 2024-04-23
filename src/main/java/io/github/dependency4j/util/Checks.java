@@ -1,5 +1,7 @@
 package io.github.dependency4j.util;
 
+import io.github.dependency4j.exception.StateException;
+
 public final class Checks {
 
     public static <E> E nonNull(E object, String contextualMessage, boolean throwError) {
@@ -14,6 +16,10 @@ public final class Checks {
         return string;
     }
 
+    public static void state(boolean state, String contextualMessage) {
+        if (!state)
+            throw new StateException(contextualMessage);
+    }
 
     public static <E> E nonNull(E object, String contextualMessage) {
         return nonNull(object, contextualMessage, true);

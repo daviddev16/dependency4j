@@ -2,8 +2,6 @@ package io.github.dependency4j;
 
 import io.github.dependency4j.util.Checks;
 
-import java.util.function.Consumer;
-
 public final class DependencyManagerChainBuilder {
 
     private final DependencyManager dependencyManager;
@@ -31,12 +29,6 @@ public final class DependencyManagerChainBuilder {
     public DependencyManagerChainBuilder prepare(Object object) {
         Checks.nonNull(object, "object must not be null.");
         dependencyManager.installSingleInstance(object);
-        return this;
-    }
-
-    public DependencyManagerChainBuilder consume(Consumer<DependencyManager> dependencyManagerConsumer) {
-        Checks.nonNull(dependencyManagerConsumer, "dependencyManagerConsumer must not be null.");
-        dependencyManagerConsumer.accept(dependencyManager);
         return this;
     }
 

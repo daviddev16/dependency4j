@@ -15,7 +15,7 @@ import java.util.*;
  * for searching and matching class types to their respective singleton
  * instances.
  *
- * @author David Duarte Pinheiro
+ * @author daviddev16
  * @version 1.0
  *
  **/
@@ -52,6 +52,26 @@ public final class DependencySearchTree {
                 dependencyClassType.getName(), Managed.class.getName()));
 
         createTypeFamiliesInSearchTree(dependencyClassType, managedAnnotation);
+    }
+
+    /**
+     *
+     * This function inserts the dependency class type into the tree structure and propagates
+     * the {@code dependencyInstance} to the singleton nodes.
+     *
+     * @param dependencyClassType The managed class type that is going to be used in dependency
+     *                            injection. Will be inserted to the dependency search tree.
+     * @param nodeInstance The node instance to be propagated.
+     *
+     * @throws NullPointerException if the dependencyClassType passed is null or the class type
+     *                              is not annotated with {@link Managed}.
+     *
+     * @since 1.0
+     *
+     **/
+    public void insertPropagation(final Class<?> dependencyClassType, Object nodeInstance) {
+        insert(dependencyClassType);
+        propagateSingletonInstanceToNodes(dependencyClassType, nodeInstance);
     }
 
     /**
@@ -470,6 +490,8 @@ public final class DependencySearchTree {
      *
      **/
     public void propagateSingletonInstanceToNodes(Class<?> classType, Object nodeInstance) {
+
+        Checks.nonNull(nodeInstance, "It is not allowed to propagate a null value through nodes.");
 
         querySingletonsByType(classType)
                 .forEach(singletonNode -> singletonNode.setNodeInstance(nodeInstance));
