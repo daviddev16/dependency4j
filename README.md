@@ -125,7 +125,7 @@ object with name *"ProductServiceImplv2"*. The Querying behaviour will follow th
 
 <br>
 
-> If no implementation object is found with the specified name `retrieveAnyways` is equals to `true`,
+> If no implementation object is found with the specified name and `retrieveAnyways` is equals to `true`,
 > The query still searches for other implementations assignable to the field type. If `retrieveAnyways`
 > is equals to `false`, The query will return `null`.
 
