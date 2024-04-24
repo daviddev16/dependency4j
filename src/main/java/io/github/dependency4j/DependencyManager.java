@@ -79,7 +79,6 @@ public final class DependencyManager {
             managedClassSet.forEach(dependencySearchTree::insert);
 
             managedClassSet.stream()
-                    .filter(classType -> !classType.isInterface())
                     .forEach(this::instantiateWithInjection);
 
         } catch (Exception exception) {
