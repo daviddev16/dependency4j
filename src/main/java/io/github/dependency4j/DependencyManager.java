@@ -193,8 +193,6 @@ public final class DependencyManager implements QueryableProxy {
         return installInstance(instance, InstallationType.DEFAULT);
     }
 
-
-
     /**
      *
      * Creates an instance for a given {@code classType}. This functions acts similar
