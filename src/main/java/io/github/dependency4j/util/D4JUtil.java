@@ -2,6 +2,7 @@ package io.github.dependency4j.util;
 
 import io.github.dependency4j.AbstractNode;
 import io.github.dependency4j.DependencySearchTree;
+import io.github.dependency4j.Managed;
 
 public final class D4JUtil {
 
@@ -15,6 +16,5 @@ public final class D4JUtil {
         for (AbstractNode childNode : node.children())
             printDependencySearchTree(childNode, escape + "  ");
     }
-
 
 }

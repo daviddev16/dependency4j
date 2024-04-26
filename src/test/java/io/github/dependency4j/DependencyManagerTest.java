@@ -3,6 +3,7 @@ package io.github.dependency4j;
 import io.github.dependency4j.example.controller.Home;
 import io.github.dependency4j.example.controller.IHomeController;
 import io.github.dependency4j.example.controller.StagingHomeController;
+import io.github.dependency4j.example.other.DynamicComponent;
 import io.github.dependency4j.example.service.IMessagingService;
 
 import io.github.dependency4j.example.service.MessagingServiceImpl;
@@ -82,6 +83,26 @@ public @Managed class DependencyManagerTest {
 
         assertEquals(homeController.helloMessage(),
                 messagingService.getMessageByClassType(StagingHomeController.class));
+    }
+
+    @Test
+    @DisplayName("Initial default installType Test")
+    public void initialDefaultInstallTypeTest()
+    {
+        DynamicComponent dynamicComponent = dependencyManager.installType(DynamicComponent.class);
+        Assertions.assertNotNull(dynamicComponent);
+        Assertions.assertEquals(dynamicComponent.value(), "DynamicComponent");
+    }
+
+    @Test
+    @DisplayName("Initial standalone installType Test")
+    public void initialStandaloneInstallTypeTest()
+    {
+        DynamicComponent dynamicComponent = dependencyManager
+                .installType(DynamicComponent.class, InstallationType.STANDALONE);
+
+        Assertions.assertNotNull(dynamicComponent);
+        Assertions.assertEquals(dynamicComponent.value(), "DynamicComponent");
     }
 
 }

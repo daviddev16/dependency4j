@@ -1,9 +1,6 @@
 package io.github.dependency4j;
 
-import io.github.dependency4j.node.JavaTypeNode;
-import io.github.dependency4j.node.NodeType;
-import io.github.dependency4j.node.RootNode;
-import io.github.dependency4j.node.SingletonNode;
+import io.github.dependency4j.node.*;
 
 import java.util.Objects;
 import java.util.Set;
@@ -60,19 +57,28 @@ public interface AbstractNode {
     default String getPrettyString() {
 
         if (this instanceof JavaTypeNode javaTypeNode)
-            return String.format("%s (%s)",
-                    javaTypeNode.getNodeClassType().getName(),
+            return String.format("JTN: %s",
+                    javaTypeNode.getNodeClassType().getSimpleName(),
                     javaTypeNode.getNodeType().name());
 
         else if (this instanceof RootNode rootNode)
-            return String.format("Root (%d)", hashCode());
+            return String.format("R:  %d", hashCode());
 
-        else if (this instanceof SingletonNode singletonNode) {
-            return String.format("Singleton of {%s} with instance {%s}",
-                    singletonNode.getNodeClassType().getName(),
-                    Objects.toString(singletonNode.getNodeInstance(), "<no instance>"));
-        }
+        else if (this instanceof VirtualSingletonNode virtualSingletonNode)
+            return String.format("VSI: [Type: %s] [Instance: %s] [Virtualized from %s]",
+                    virtualSingletonNode.getNodeClassType().getSimpleName(),
+                    Objects.toString(virtualSingletonNode.getNodeInstance(), "<no instance>"),
+                    virtualSingletonNode.getParentSingletionNode());
+
+        else if (this instanceof SingletonNode singletonNode)
+            return String.format("SI: [Type: %s] [Instance: %s]",
+                    singletonNode.getNodeClassType().getSimpleName(),
+                    namedInstance(singletonNode.getNodeInstance()));
 
         return toString();
+    }
+
+    private String namedInstance(Object o) {
+        return (o != null) ? o.getClass().getSimpleName()+"@"+o.hashCode() : "<no instance>";
     }
 }

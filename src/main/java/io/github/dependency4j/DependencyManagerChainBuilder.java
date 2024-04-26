@@ -37,6 +37,11 @@ public final class DependencyManagerChainBuilder {
         return this;
     }
 
+    public DependencyManagerChainBuilder enablePrimitiveDefaultValue() {
+        dependencyManager.enablePrimitiveDefaultValue();
+        return this;
+    }
+
     public DependencyManager getDependencyManager() {
         return dependencyManager;
     }

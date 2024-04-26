@@ -1,6 +1,8 @@
 package io.github.dependency4j.node;
 
 import io.github.dependency4j.*;
+import io.github.dependency4j.util.ReflectionUtil;
+import io.github.dependency4j.util.StrUtil;
 
 import java.util.Collections;
 import java.util.Objects;
@@ -20,9 +22,9 @@ public class SingletonNode implements AbstractNode {
     private final String nodeName;
     private final Class<?> classType;
 
-    public SingletonNode(Class<?> classType, String nodeName) {
-        this. classType = classType;
-        this.nodeName = nodeName;
+    public SingletonNode(Class<?> classType) {
+        this.classType = classType;
+        this.nodeName = ReflectionUtil.coalesceClassName(classType);
     }
 
     /**

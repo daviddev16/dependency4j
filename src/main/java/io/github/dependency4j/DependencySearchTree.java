@@ -3,9 +3,12 @@ package io.github.dependency4j;
 import io.github.dependency4j.node.JavaTypeNode;
 import io.github.dependency4j.node.RootNode;
 import io.github.dependency4j.node.SingletonNode;
+import io.github.dependency4j.node.VirtualSingletonNode;
 import io.github.dependency4j.util.Checks;
+import io.github.dependency4j.util.ReflectionUtil;
 import io.github.dependency4j.util.StrUtil;
 
+import java.lang.reflect.Method;
 import java.util.*;
 
 /**
@@ -46,12 +49,7 @@ public final class DependencySearchTree {
         Checks.nonNull(dependencyClassType, "Could not insert a null dependency " +
                 "object in the Dependency Search Tree.");
 
-        final Managed managedAnnotation = dependencyClassType.getAnnotation(Managed.class);
-
-        Checks.nonNull(managedAnnotation, String.format("\"%s\" should be annotated with \"%s\".",
-                dependencyClassType.getName(), Managed.class.getName()));
-
-        createTypeFamiliesInSearchTree(dependencyClassType, managedAnnotation);
+        createTypeFamiliesInSearchTree(dependencyClassType);
     }
 
     /**
@@ -86,32 +84,61 @@ public final class DependencySearchTree {
      * class, the map will look like a key equals to "{@code Class<A>}" and value
      * "{@code Set<Class<?>>}" that contains the B interface. It is ordered by the very
      * first interface parent.
+     * <p>
+     * This is a convenient function used by {@link #insert(Class)} function.
      *
-     * @param dependencyClassType The managed class type to be inserted to the search tree.
-     * @param managedAnnotation   The {@link Managed} annotation of the dependency bean,
-     *                            which is {@code dependencyObject}.
+     * @param dependencyClassType The dependency class type that will receive a new
+     *                            {@link SingletonNode}.
      *
-     * @see DependencySearchTree#appendClassTypesInSearchTree(Map, Managed, Class)
      * @see DependencySearchTree#createInterfaceTreeMapping(Class)
      * @see DependencySearchTree#createSuperclassTreeMapping(Class)
      *
      * @since 1.0
      *
      **/
-    private void createTypeFamiliesInSearchTree(Class<?> dependencyClassType, Managed managedAnnotation) {
+    private void createTypeFamiliesInSearchTree(Class<?> dependencyClassType) {
+        createTypeFamiliesInSearchTree(new SingletonNode(dependencyClassType));
+    }
+
+    /**
+     *
+     * This function is responsible for mapping recursively each interface implemented
+     * inside the class and its superclasses. It first maps all interfaces class type
+     * to a map where the key is the interface and the value is a set of "sub" interfaces.
+     * {@link DependencySearchTree#appendClassTypesInSearchTree} will be responsible for
+     * taking this Sets of interfaces types and add to the search tree.
+     * <p>
+     * If we have an interface A which extends B, if A is implemented by a {@link Managed}
+     * class, the map will look like a key equals to "{@code Class<A>}" and value
+     * "{@code Set<Class<?>>}" that contains the B interface. It is ordered by the very
+     * first interface parent.
+     *
+     * @param singletonNode The SingletonNode created from {@code dependencyClassType}.
+     *
+     * @see DependencySearchTree#createInterfaceTreeMapping(Class)
+     * @see DependencySearchTree#createSuperclassTreeMapping(Class)
+     *
+     * @since 1.0
+     *
+     **/
+    private void createTypeFamiliesInSearchTree(SingletonNode singletonNode) {
+
+        Class<?> dependencyClassType = singletonNode.getNodeClassType();
 
         Map<Class<?>, Set<Class<?>>> interfacesTreeMapping = createInterfaceTreeMapping(dependencyClassType);
 
         /* it should add the dependency class to the root node if no interface is implemented */
         if (interfacesTreeMapping.isEmpty())
-            rootNode.addChildNode(new SingletonNode(dependencyClassType, managedAnnotation.name()));
+            rootNode.addChildNode(singletonNode);
 
-        appendClassTypesInSearchTree(interfacesTreeMapping, managedAnnotation, dependencyClassType);
+        appendClassTypesInSearchTree(interfacesTreeMapping, dependencyClassType);
 
         final Map<Class<?>, Set<Class<?>>> superclassTreeMapping
                 = createSuperclassTreeMapping(dependencyClassType);
 
-        appendClassTypesInSearchTree(superclassTreeMapping, managedAnnotation, dependencyClassType);
+        appendClassTypesInSearchTree(superclassTreeMapping, dependencyClassType);
+
+        createVirtualSingletonsInSearchTree(singletonNode);
     }
 
     /**
@@ -124,20 +151,18 @@ public final class DependencySearchTree {
      *
      * @param classTypesMapping The sub-interfaces & superclasses mapping of the
      *                          dependency class type.
-     * @param managedAnnotation The {@link Managed} annotation of the dependency bean,
-     *                          which is {@code dependencyObject}.
      * @param dependencyClassType The managed class type to be inserted to the search tree.
      *
-     * @see DependencySearchTree#appendToSearchTree(Set, Class, Managed)
+     * @see DependencySearchTree#appendToSearchTree(Set, Class)
      *
      * @since 1.0
      *
      **/
     private void appendClassTypesInSearchTree(Map<Class<?>, Set<Class<?>>> classTypesMapping,
-                                              Managed managedAnnotation, Class<?> dependencyClassType) {
+                                              Class<?> dependencyClassType) {
 
         for (Map.Entry<Class<?>, Set<Class<?>>> classEntries : classTypesMapping.entrySet())
-            appendToSearchTree(classEntries.getValue(), dependencyClassType, managedAnnotation);
+            appendToSearchTree(classEntries.getValue(), dependencyClassType);
     }
 
     /**
@@ -197,8 +222,7 @@ public final class DependencySearchTree {
      * @since 1.0
      *
      **/
-    private void generateSubInterfacePathSet(Class<?> interfaceClassType,
-                                             Set<Class<?>> subInterfacesSet) {
+    private void generateSubInterfacePathSet(Class<?> interfaceClassType, Set<Class<?>> subInterfacesSet) {
 
         for (Class<?> childInterfaceClassType : interfaceClassType.getInterfaces()) {
             generateSubInterfacePathSet(childInterfaceClassType, subInterfacesSet);
@@ -270,8 +294,6 @@ public final class DependencySearchTree {
      * last element inserted it is the {@link SingletonNode} of {@code dependencyObject}.
      *
      * @param orderedClassType  The {@link Class} object of {@code dependencyObject}.
-     * @param managedAnnotation The {@link Managed} annotation of the dependency bean,
-     *                          which is {@code dependencyObject}.
      * @param dependencyClassType The managed class type to be inserted to the search tree.
      *
      * @see DependencySearchTree#createInterfaceTreeMapping(Class)
@@ -279,22 +301,45 @@ public final class DependencySearchTree {
      * @since 1.0
      *
      **/
-    private void appendToSearchTree(Set<Class<?>> orderedClassType,
-                                    Class<?> dependencyClassType, Managed managedAnnotation) {
+    private void appendToSearchTree(Set<Class<?>> orderedClassType, Class<?> dependencyClassType) {
 
         AbstractNode parentNode = rootNode;
 
         for (Class<?> classType : orderedClassType)
             parentNode = findOrCreateJavaTypeNode(classType, parentNode);
 
-        /* adds the dependency object to the end of the tree */
-        String classNameAlias = coalesceClassName(dependencyClassType, managedAnnotation);
-        parentNode.addChildNode(new SingletonNode(dependencyClassType, classNameAlias));
+        parentNode.addChildNode(new SingletonNode(dependencyClassType));
     }
 
     /**
      *
-     * This function is used internally by {@link DependencySearchTree#appendToSearchTree(Set, Class, Managed)}
+     * Given a parent {@link SingletonNode}, this function will scan for all virtual methods
+     * and add them to the search tree. If a virtual method is found, a {@link VirtualSingletonNode}
+     * is created with its {@link VirtualSingletonNode#getParentSingletionNode()} set to the
+     * {@code parentSingletonNode} parameter.
+     *
+     * @see DependencySearchTree#createInterfaceTreeMapping(Class)
+     *
+     * @since 1.0.4
+     *
+     **/
+    private void createVirtualSingletonsInSearchTree(SingletonNode parentSingletonNode) {
+
+        Class<?> dependencyClassType = parentSingletonNode.getNodeClassType();
+
+        ReflectionUtil.consumeAllVirtualMethodsFromClassType(dependencyClassType, (virtualMethod) ->
+        {
+            Class<?> virtualMethodClassType = virtualMethod.getReturnType();
+
+            createTypeFamiliesInSearchTree(new VirtualSingletonNode(virtualMethodClassType,
+                    parentSingletonNode, virtualMethod));
+        });
+
+    }
+
+    /**
+     *
+     * This function is used internally by {@link DependencySearchTree#appendToSearchTree(Set, Class)}
      * to find the {@link JavaTypeNode} relative to {@code parentNode} that has the same
      * class type as the parameter {@code classType}. Returns null if no {@link JavaTypeNode}
      * correspondent node exists in the tree.
@@ -303,7 +348,7 @@ public final class DependencySearchTree {
      * @param parentNode The scanned node used to find the correspondent {@link JavaTypeNode}.
      *
      * @see DependencySearchTree#findOrCreateJavaTypeNode(Class, AbstractNode)
-     * @see DependencySearchTree#appendToSearchTree(Set, Class, Managed) 
+     * @see DependencySearchTree#appendToSearchTree(Set, Class)
      *
      * @since 1.0
      *
@@ -326,7 +371,7 @@ public final class DependencySearchTree {
 
     /**
      *
-     * This function is used internally by {@link DependencySearchTree#appendToSearchTree(Set, Class, Managed)}
+     * This function is used internally by {@link DependencySearchTree#appendToSearchTree(Set, Class)}
      * to find the {@link JavaTypeNode} relative to {@code parentNode} that has the same
      * class type as the parameter {@code classType}. If there is no correspondent
      * {@link JavaTypeNode}, a new node is created as a child of {@code parentNode}.
@@ -336,7 +381,7 @@ public final class DependencySearchTree {
      * @param parentNode The scanned node used to find the correspondent {@link JavaTypeNode}.
      *
      * @see DependencySearchTree#findJavaTypeNode(Class, AbstractNode)
-     * @see DependencySearchTree#appendToSearchTree(Set, Class, Managed) 
+     * @see DependencySearchTree#appendToSearchTree(Set, Class)
      *
      * @since 1.0
      *
@@ -454,9 +499,6 @@ public final class DependencySearchTree {
      * @param node           The parent or root node to be searched.
      * @param matchResultSet The pre instantiated {@link Set} to be used as the list
      *                       of the collected {@link SingletonNode}
-     *
-     * @return A non-null {@link Set} of SingletonNode.
-     *
      * @since 1.0
      *
      **/
@@ -495,22 +537,6 @@ public final class DependencySearchTree {
 
         querySingletonsByType(classType)
                 .forEach(singletonNode -> singletonNode.setNodeInstance(nodeInstance));
-    }
-
-    /**
-     *
-     * Used to retrieve a valid non-null name for the dependency object SingletonNode.
-     *
-     * @param managedAnnotation The {@link Managed} annotation of the dependency bean,
-     *                          which is {@code dependencyObject}.
-     * @param dependencyClassType The managed class type to be inserted to the search tree.
-     *
-     * @since 1.0
-     *
-     **/
-    private String coalesceClassName(Class<?> dependencyClassType, Managed managedAnnotation) {
-        return !StrUtil.isNullOrBlank(managedAnnotation.name()) ?
-                managedAnnotation.name() : dependencyClassType.getSimpleName();
     }
 
     public AbstractNode getRootNode() {
