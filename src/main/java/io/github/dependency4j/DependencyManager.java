@@ -473,7 +473,6 @@ public final class DependencyManager implements QueryableProxy {
         Method virtualizedMethod = virtualSingletonNode.getVirtualMethod();
 
         return invokeMethodWithInjection(virtualizedObject, virtualizedMethod);
-
     }
 
     /**

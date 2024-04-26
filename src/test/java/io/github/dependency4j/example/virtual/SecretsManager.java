@@ -1,15 +1,15 @@
 package io.github.dependency4j.example.virtual;
 
 
-public class SecretsManager {
+public class SecretsManager implements ISecret {
 
     private final String secretKey;
 
     public SecretsManager(String secretKey) {
-        System.out.println("teste");
         this.secretKey = secretKey;
     }
 
+    @Override
     public String getSecretKey() {
         return secretKey;
     }
