@@ -1,4 +1,4 @@
-package io.github.dependency4j;
+package io.github.dependency4j.exception;
 
 import static java.lang.String.*;
 

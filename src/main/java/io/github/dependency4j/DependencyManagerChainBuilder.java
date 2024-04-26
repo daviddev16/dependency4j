@@ -26,9 +26,19 @@ public final class DependencyManagerChainBuilder {
         return this;
     }
 
+    public DependencyManagerChainBuilder includeDependencyManagerAsDependency() {
+        dependencyManager.includeDependencyManagerAsDependency();
+        return this;
+    }
+
     public DependencyManagerChainBuilder prepare(Object object) {
         Checks.nonNull(object, "object must not be null.");
         dependencyManager.installInstance(object);
+        return this;
+    }
+
+    public DependencyManagerChainBuilder enablePrimitiveDefaultValue() {
+        dependencyManager.enablePrimitiveDefaultValue();
         return this;
     }
 

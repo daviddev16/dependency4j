@@ -3,10 +3,12 @@ package io.github.dependency4j.example.controller;
 import io.github.dependency4j.Managed;
 import io.github.dependency4j.Pull;
 import io.github.dependency4j.Strategy;
+import io.github.dependency4j.Virtual;
 import io.github.dependency4j.example.service.IMessagingService;
+import io.github.dependency4j.example.virtual.SecretsManager;
 
 @Managed(
-        strategy = @Strategy({"Production"})
+        strategy = @Strategy({"Production", "VirtualTesting"})
 )
 public class ProductionHomeController extends Home {
 

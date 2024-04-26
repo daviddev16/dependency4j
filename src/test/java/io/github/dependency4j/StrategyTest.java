@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+@DisplayName("DependencyManager Strategy Setup Test")
 public class StrategyTest {
 
     public static final String TEST_EXAMPLE_PACKAGE = "io.github.dependency4j.example";
