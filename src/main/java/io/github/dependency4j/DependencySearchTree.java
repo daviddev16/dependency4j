@@ -133,10 +133,13 @@ public final class DependencySearchTree {
 
         appendClassTypesInSearchTree(interfacesTreeMapping, dependencyClassType);
 
-        final Map<Class<?>, Set<Class<?>>> superclassTreeMapping
-                = createSuperclassTreeMapping(dependencyClassType);
+        if (!dependencyClassType.isInterface()) {
 
-        appendClassTypesInSearchTree(superclassTreeMapping, dependencyClassType);
+            final Map<Class<?>, Set<Class<?>>> superclassTreeMapping
+                    = createSuperclassTreeMapping(dependencyClassType);
+
+            appendClassTypesInSearchTree(superclassTreeMapping, dependencyClassType);
+        }
 
         createVirtualSingletonsInSearchTree(singletonNode);
     }
