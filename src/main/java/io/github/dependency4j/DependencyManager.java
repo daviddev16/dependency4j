@@ -74,14 +74,38 @@ public final class DependencyManager implements QueryableProxy {
      *
      **/
     public void installPackage(String packagePath) {
+        installPackage(packagePath, ClassLoader.getSystemClassLoader());
+    }
+
+    /**
+     *
+     * Given a package name, install function searches for all classes annotated with
+     * {@link Managed} annotation, appends all available classes to the {@link DependencySearchTree},
+     * then starts the recursive instantiation. An available class is a managed class
+     * with {@code dynamic} parameter set to true (default value for {@link Managed}.
+     * <p>
+     * The recursive instantiation works by creating objects whose parameters are managed
+     * classes. When a non-managed class is passed, the installation process will give
+     * a null value to the non-managed parameter.
+     *
+     * @param packagePath Package path
+     *
+     * @throws NullPointerException        {@code packageName} is null or blank.
+     * @throws InstallationFailedException When any error occurs while package installation,
+     *                                     It will give a cause exception.
+     *
+     * @since 1.0
+     *
+     **/
+    public void installPackage(String packagePath, ClassLoader classLoader) {
         try {
             Checks.state(!isNullOrBlank(packagePath), "packageName must not be null or blank.");
 
-            Set<Class<?>> managedClassSet = ClassFinder.scanPackage(packagePath)
+            Set<Class<?>> managedClassSet = ClassFinder.scanPackage(classLoader, packagePath, true)
                     .stream()
                     .filter(classType -> classType.isAnnotationPresent(Managed.class))
-                        .filter(this::checkNonAbstractClassType)
-                        .filter(this::checkClassEligibility)
+                    .filter(this::checkNonAbstractClassType)
+                    .filter(this::checkClassEligibility)
                     .collect(Collectors.toSet());
 
             managedClassSet.forEach(dependencySearchTree::insert);
