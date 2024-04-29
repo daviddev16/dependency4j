@@ -9,6 +9,10 @@ public class SecretsManager implements ISecret {
         this.secretKey = secretKey;
     }
 
+    public SecretsManager() {
+        this.secretKey = "default123";
+    }
+
     @Override
     public String getSecretKey() {
         return secretKey;
