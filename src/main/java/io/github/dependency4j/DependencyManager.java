@@ -89,6 +89,7 @@ public final class DependencyManager implements QueryableProxy {
      * a null value to the non-managed parameter.
      *
      * @param packagePath Package path
+     * @param classLoader the scan package class loader
      *
      * @throws NullPointerException        {@code packageName} is null or blank.
      * @throws InstallationFailedException When any error occurs while package installation,
@@ -101,11 +102,11 @@ public final class DependencyManager implements QueryableProxy {
         try {
             Checks.state(!isNullOrBlank(packagePath), "packageName must not be null or blank.");
 
-            Set<Class<?>> managedClassSet = ClassFinder.scanPackage(classLoader, packagePath, true)
+            Set<Class<?>> managedClassSet = ClassFinder.scanPackages(classLoader, packagePath)
                     .stream()
                     .filter(classType -> classType.isAnnotationPresent(Managed.class))
-                    .filter(this::checkNonAbstractClassType)
-                    .filter(this::checkClassEligibility)
+                        .filter(this::checkNonAbstractClassType)
+                        .filter(this::checkClassEligibility)
                     .collect(Collectors.toSet());
 
             managedClassSet.forEach(dependencySearchTree::insert);
