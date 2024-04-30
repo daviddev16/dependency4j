@@ -7,6 +7,7 @@ import io.github.dependency4j.example.other.DynamicComponent;
 import io.github.dependency4j.example.service.IMessagingService;
 
 import io.github.dependency4j.example.service.MessagingServiceImpl;
+import io.github.dependency4j.util.D4JUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,7 @@ public @Managed class DependencyManagerTest {
 
         assertNotNull(homeController);
         assertEquals(homeController.getClass(), StagingHomeController.class);
+
 
         assertEquals("Staging", homeController.environmentName());
         assertEquals("Hello from Staging!", homeController.helloMessage());
