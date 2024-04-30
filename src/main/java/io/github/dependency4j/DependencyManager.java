@@ -711,7 +711,7 @@ public final class DependencyManager implements QueryableProxy {
 
         exceptionMessage = format("[Constructor type: %s] %s", constructorType, exceptionMessage);
 
-        throw new ReflectionStateException(exceptionMessage);
+        throw new ReflectionStateException(exceptionMessage, exception);
     }
 
     /**
