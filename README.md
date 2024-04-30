@@ -9,7 +9,7 @@
 <br>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/DEPENDENCY4J%20%20-1.0.41_SNAPSHOT-purple"/>
+  <img src="https://img.shields.io/badge/DEPENDENCY4J%20%20-1.0.7_SNAPSHOT-purple"/>
   <img src="https://github.com/daviddev16/dependency4j/actions/workflows/maven-testing.yml/badge.svg"/>
   <img src="https://img.shields.io/badge/Java%20%20-17.0.10-orange"/>
 </p>
