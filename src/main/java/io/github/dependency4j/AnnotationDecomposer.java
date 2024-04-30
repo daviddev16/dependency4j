@@ -3,16 +3,20 @@ package io.github.dependency4j;
 import io.github.dependency4j.util.Checks;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
 
 public @InternalDynamicallyManaged class AnnotationDecomposer {
 
-    public boolean isAnnotationComposed(Class<?> classType, Class<? extends Annotation> annotationClassType) {
-        return decomposeAnnotationFromClassType(classType, annotationClassType) != null;
+    public boolean isAnnotationComposed(AnnotatedElement annotatedElement,
+                                        Class<? extends Annotation> annotationClassType)
+    {
+        return decomposeAnnotationFromMember(annotatedElement, annotationClassType) != null;
     }
 
-    public <T extends Annotation> T decomposeAnnotationFromClassType(Class<?> classType, Class<T> annotationClassType) {
+    public <T extends Annotation> T decomposeAnnotationFromMember(AnnotatedElement annotatedElement,
+                                                                  Class<T> annotationClassType) {
 
-        for (Annotation classTypeAnnotation : classType.getAnnotations()) {
+        for (Annotation classTypeAnnotation : annotatedElement.getAnnotations()) {
 
             final Annotation decomposedAnnotation =
                     decompose(classTypeAnnotation, annotationClassType);

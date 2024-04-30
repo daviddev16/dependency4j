@@ -584,7 +584,8 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
             else
                 return null;
 
-        Pull pullAnnotation = accessibleObject.getAnnotation(Pull.class);
+        Pull pullAnnotation = annotationDecomposer
+                .decomposeAnnotationFromMember(accessibleObject, Pull.class);
 
         final QueryOptions optionalQueryOptions = (pullAnnotation != null)
                 ? AnnotationTransformer.transformPullAnnotationToQueryOptions(pullAnnotation)
@@ -744,7 +745,7 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
 
         for (Field field : parentClassType.getDeclaredFields()) {
 
-            if (!field.isAnnotationPresent(Pull.class))
+            if (!annotationDecomposer.isAnnotationComposed(field, Pull.class))
                 continue;
 
             Class<?> fieldClassType = field.getType();
@@ -787,7 +788,8 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
 
         for (Method method : parentClassType.getDeclaredMethods()) {
 
-            if (!method.isAnnotationPresent(Pull.class) || !method.getName().startsWith("set"))
+            if (!annotationDecomposer.isAnnotationComposed(method, Pull.class) ||
+                    !method.getName().startsWith("set"))
                 continue;
 
             invokeMethodWithInjection(instance, method);
@@ -1047,7 +1049,7 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
      **/
     private Managed decomposeManagedAnnotationFrom(Class<?> classType) {
         return annotationDecomposer
-                .decomposeAnnotationFromClassType(classType, Managed.class);
+                .decomposeAnnotationFromMember(classType, Managed.class);
     }
 
     /**
