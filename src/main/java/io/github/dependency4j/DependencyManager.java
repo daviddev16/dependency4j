@@ -10,11 +10,14 @@ import io.github.dependency4j.util.Checks;
 import io.github.dependency4j.util.ReflectionUtil;
 
 import java.lang.reflect.*;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static io.github.dependency4j.util.StrUtil.*;
+import static io.github.dependency4j.util.StrUtil.isNullOrBlank;
 import static java.lang.String.format;
 
 /**
@@ -33,13 +36,14 @@ import static java.lang.String.format;
  * @version 1.0
  *
  **/
-@Managed(dynamic = true)
-public final class DependencyManager implements QueryableProxy {
+public @InternalDynamicallyManaged class DependencyManager implements QueryableProxy {
 
     public static final String ANNOTATED_CONSTRUCTOR = "ANNOTATED";
     public static final String DEFAULT_CONSTRUCTOR   = "EMPTY/DEFAULT";
 
     private final DependencySearchTree dependencySearchTree;
+    private final AnnotationDecomposer annotationDecomposer;
+
     private final Set<String> strategies;
 
     private boolean enablePrimitiveDefaultValue = false;
@@ -48,7 +52,9 @@ public final class DependencyManager implements QueryableProxy {
         return new DependencyManagerChainBuilder();
     }
 
-    public DependencyManager() {
+    public DependencyManager()
+    {
+        annotationDecomposer = new AnnotationDecomposer();
         dependencySearchTree = new DependencySearchTree();
         strategies           = new HashSet<>();
     }
@@ -104,7 +110,8 @@ public final class DependencyManager implements QueryableProxy {
 
             Set<Class<?>> managedClassSet = ClassFinder.scanPackages(classLoader, packagePath)
                     .stream()
-                    .filter(classType -> classType.isAnnotationPresent(Managed.class))
+                        .filter(classType -> annotationDecomposer
+                                .isAnnotationComposed(classType, Managed.class))
                         .filter(this::checkNonAbstractClassType)
                         .filter(this::checkClassEligibility)
                     .collect(Collectors.toSet());
@@ -146,7 +153,7 @@ public final class DependencyManager implements QueryableProxy {
      * @since 1.0
      *
      **/
-    public Object installInstance(Object instance, InstallationType installationType) {
+    public <T> T installInstance(T instance, InstallationType installationType) {
 
         Checks.nonNull(instance, "object must not be null.");
         Checks.nonNull(installationType, "installationType must not be null.");
@@ -214,7 +221,7 @@ public final class DependencyManager implements QueryableProxy {
      * @since 1.0
      *
      **/
-    public Object installInstance(Object instance) {
+    public <T> T installInstance(T instance) {
         return installInstance(instance, InstallationType.DEFAULT);
     }
 
@@ -392,9 +399,9 @@ public final class DependencyManager implements QueryableProxy {
     @SuppressWarnings({"Unchecked"})
     private <T> T instantiateWithInjection(Class<T> classType) {
 
-        Managed managedAnnotation = classType.getAnnotation(Managed.class);
+        Managed composedManagedAnnotation = decomposeManagedAnnotationFrom(classType);
 
-        if (managedAnnotation != null && managedAnnotation.dynamic())
+        if (composedManagedAnnotation != null && composedManagedAnnotation.dynamic())
             return (T) handleSingletonClassInstantiation(classType);
 
         SingletonNode classTypeSingletonNode =
@@ -903,10 +910,10 @@ public final class DependencyManager implements QueryableProxy {
      **/
     private boolean checkClassEligibility(Class<?> classType) {
 
-        Managed managedAnnotation = classType.getAnnotation(Managed.class);
-        boolean flagInstanceAnyways = !managedAnnotation.disposable();
+        Managed composedManagedAnnotation = decomposeManagedAnnotationFrom(classType);
+        boolean flagInstanceAnyways = !composedManagedAnnotation.disposable();
 
-        if (managedAnnotation.dynamic())
+        if (composedManagedAnnotation.dynamic())
             return false;
 
         /*
@@ -916,7 +923,7 @@ public final class DependencyManager implements QueryableProxy {
         if (strategies.isEmpty())
             return true;
 
-        Strategy strategyAnn = managedAnnotation.strategy();
+        Strategy strategyAnn = composedManagedAnnotation.strategy();
 
         for (String classStrategyName : strategyAnn.value()) {
             for (String strategyName : strategies) {
@@ -1029,6 +1036,22 @@ public final class DependencyManager implements QueryableProxy {
 
     /**
      *
+     * Given a {@code classType}, this function will decompose the {@link Managed} annotation.
+     * The use of annotation composition allows the user to create custom annotations and use
+     * them strategically to their need.
+     *
+     * @see AnnotationDecomposer
+     *
+     * @since 1.0.7
+     *
+     **/
+    private Managed decomposeManagedAnnotationFrom(Class<?> classType) {
+        return annotationDecomposer
+                .decomposeAnnotationFromClassType(classType, Managed.class);
+    }
+
+    /**
+     *
      * A {@link Set} of all {@link DependencyManager} strategies.
      *
      * @since 1.0
@@ -1038,4 +1061,7 @@ public final class DependencyManager implements QueryableProxy {
         return strategies;
     }
 
+    public AnnotationDecomposer getAnnotationDecomposer() {
+        return annotationDecomposer;
+    }
 }

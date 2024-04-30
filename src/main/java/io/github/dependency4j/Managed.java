@@ -19,7 +19,7 @@ import io.github.dependency4j.node.*;
  *
  **/
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
+@Target({ElementType.TYPE, ElementType.TYPE_USE})
 public @interface Managed {
 
     /**

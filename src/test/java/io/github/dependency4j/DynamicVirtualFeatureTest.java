@@ -28,8 +28,6 @@ public class DynamicVirtualFeatureTest {
         Assertions.assertNotNull(userService);
         Assertions.assertNotNull(userService.getSecret());
         Assertions.assertEquals(userService.getSecret().getSecretKey(), "default123");
-
     }
-
 
 }
