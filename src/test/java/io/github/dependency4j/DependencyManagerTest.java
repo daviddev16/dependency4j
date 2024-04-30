@@ -11,6 +11,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -24,7 +28,7 @@ public @Managed class DependencyManagerTest {
     public DependencyManagerTest()
     {
         dependencyManager = DependencyManager.builder()
-                .strategy("Testing")
+                .strategy("Testing", "VirtualTesting")
                 .installPackage("io.github.dependency4j.example")
                 .prepare(this)
                 .getDependencyManager();
@@ -43,7 +47,6 @@ public @Managed class DependencyManagerTest {
 
         assertEquals("Staging", homeController.environmentName());
         assertEquals("Hello from Staging!", homeController.helloMessage());
-
     }
 
     @Test

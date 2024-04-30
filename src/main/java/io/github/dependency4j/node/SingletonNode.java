@@ -87,6 +87,10 @@ public class SingletonNode implements AbstractNode {
         return nodeName;
     }
 
+    public boolean hasSingletonInstance() {
+        return nodeSingletonInstance != null;
+    }
+
     /**
      *
      * {@inheritDoc}

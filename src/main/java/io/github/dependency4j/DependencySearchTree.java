@@ -10,6 +10,7 @@ import io.github.dependency4j.util.StrUtil;
 
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -487,10 +488,9 @@ public final class DependencySearchTree {
      **/
     public List<SingletonNode> querySingletonsByType(Class<?> classType) {
 
-        final List<SingletonNode> matchResultSet = new ArrayList<>();
-        queryRecursivelySingletons(classType, rootNode, matchResultSet);
-
-        return matchResultSet;
+        final List<SingletonNode> matchResultList = new ArrayList<>();
+        queryRecursivelySingletons(classType, rootNode, matchResultList);
+        return matchResultList;
     }
 
     /**
@@ -511,8 +511,12 @@ public final class DependencySearchTree {
         for (AbstractNode childNode : node.children()) {
 
             if (childNode instanceof JavaTypeNode javaTypeNode)
-                queryRecursivelySingletons(classType, javaTypeNode, matchResultSet);
+            {
+                if (!javaTypeNode.getNodeClassType().isAssignableFrom(classType))
+                    continue;
 
+                queryRecursivelySingletons(classType, javaTypeNode, matchResultSet);
+            }
             else if (childNode instanceof SingletonNode singletonNode) {
 
                 final Class<?> singletonClassType = singletonNode.getNodeClassType();
@@ -540,6 +544,23 @@ public final class DependencySearchTree {
 
         querySingletonsByType(classType)
                 .forEach(singletonNode -> singletonNode.setNodeInstance(nodeInstance));
+    }
+
+    /**
+     * Retrive all singleton instances inserted to the tree.
+     *
+     * @since 1.0.6
+     *
+     **/
+    public Set<Object> queryAllInstances() {
+
+        final List<SingletonNode> matchResultList = new ArrayList<>();
+        queryRecursivelySingletons(Object.class, rootNode, matchResultList);
+
+        return matchResultList.stream()
+                .filter(SingletonNode::hasSingletonInstance)
+                .map(SingletonNode::getNodeInstance)
+                .collect(Collectors.toSet());
     }
 
     public AbstractNode getRootNode() {
