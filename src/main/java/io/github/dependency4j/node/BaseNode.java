@@ -18,6 +18,8 @@ import java.util.Set;
  *
  * @author daviddev16
  *
+ * @since 1.0.0
+ *
  **/
 public abstract class BaseNode implements AbstractNode {
 
@@ -34,6 +36,8 @@ public abstract class BaseNode implements AbstractNode {
      * Adds the {@code abstractNode} to the {@link Set} implementation
      * of {@link BaseNode}
      *
+     * @since 1.0.0
+     *
      **/
     @Override
     public void addChildNode(AbstractNode abstractNode) {
@@ -46,6 +50,8 @@ public abstract class BaseNode implements AbstractNode {
      * <p>
      * Returns the {@link Set} instance implemented inside of {@link BaseNode}
      * constructor.
+     *
+     * @since 1.0.0
      *
      **/
     @Override

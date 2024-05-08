@@ -22,11 +22,6 @@ public class ClassFinder {
 
     private static final String CLASS_SUFFIX = ".class";
 
-    public static Set<Class<?>> scanPackage(String parentPackageName) {
-        ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader();
-        return scanPackages(systemClassLoader, parentPackageName);
-    }
-
     public static Set<Class<?>> scanPackages(ClassLoader classLoader, String parentPackageName) {
         Checks.nonNull(parentPackageName, "The parent package name can not be null.");
         Checks.nonNull(classLoader, "Could not scan \"" + parentPackageName + "\" with a null classLoader.");

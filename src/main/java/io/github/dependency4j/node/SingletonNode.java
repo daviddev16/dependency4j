@@ -15,16 +15,20 @@ import java.util.Set;
  *
  * @author daviddev16
  *
+ * @since 1.0.0
+ *
  **/
 public class SingletonNode implements AbstractNode {
 
-    private Object nodeSingletonInstance;
-    private final String nodeName;
-    private final Class<?> classType;
+    private volatile Object nodeSingletonInstance;
+    private final TypeInformationHolder typeInformationHolder;
 
-    public SingletonNode(Class<?> classType) {
-        this.classType = classType;
-        this.nodeName = ReflectionUtil.coalesceClassName(classType);
+    public SingletonNode(TypeInformationHolder typeInformationHolder) {
+        this.typeInformationHolder = typeInformationHolder;
+    }
+
+    public TypeInformationHolder getTypeInformationHolder() {
+        return typeInformationHolder;
     }
 
     /**
@@ -33,6 +37,8 @@ public class SingletonNode implements AbstractNode {
      * called.
      *
      * @throws IllegalStateException when the function is called.
+     *
+     * @since 1.0.0
      *
      **/
     @Override
@@ -44,6 +50,8 @@ public class SingletonNode implements AbstractNode {
      *
      * Sets the instance value of the {@link SingletonNode}.
      *
+     * @since 1.0.0
+     *
      **/
     public void setNodeInstance(Object nodeSingletonInstance) {
         this.nodeSingletonInstance = nodeSingletonInstance;
@@ -53,13 +61,18 @@ public class SingletonNode implements AbstractNode {
      *
      * Returns the wrapped class type of {@link SingletonNode}.
      *
+     * @since 1.0.0
+     *
      **/
     public Class<?> getNodeClassType() {
-        return classType;
+        return typeInformationHolder.getWrappedClassType();
     }
 
     /**
+     *
      * Returns the instance object of {@link SingletonNode}.
+     *
+     * @since 1.0.0
      * */
     public Object getNodeInstance() {
         return nodeSingletonInstance;
@@ -70,6 +83,9 @@ public class SingletonNode implements AbstractNode {
      * {@inheritDoc}
      * <p>
      * This function will always return {@link NodeType#IMPLEMENTATION}.
+     *
+     * @since 1.0.0
+     *
      **/
     @Override
     public NodeType getNodeType() {
@@ -82,9 +98,11 @@ public class SingletonNode implements AbstractNode {
      * It is used when filtered name is used in the {@link QueryOptions}
      * passed in the query of {@link DependencySearchTree}.
      *
+     * @since 1.0.0
+     *
      **/
     public String getNodeName() {
-        return nodeName;
+        return typeInformationHolder.getName();
     }
 
     public boolean hasSingletonInstance() {
@@ -94,6 +112,8 @@ public class SingletonNode implements AbstractNode {
     /**
      *
      * {@inheritDoc}
+     *
+     * @since 1.0.0
      *
      **/
     @Override
@@ -109,18 +129,23 @@ public class SingletonNode implements AbstractNode {
      * if {@link  SingletonNode#classType} is null, then its hashCode will be equals to
      * {@code Objects.hashCode(this)}.
      *
+     * @since 1.0.0
+     *
      **/
     @Override
     public int hashCode() {
-        return (classType == null) ?
-                Objects.hashCode(this) : classType.hashCode() ^ 7;
+        return (typeInformationHolder.getWrappedClassType() == null)
+                ? super.hashCode()
+                : 31 + typeInformationHolder.getWrappedClassType().hashCode() ^ 7;
     }
 
     /**
      *
      * When obj is a {@link SingletonNode}, then this function will return true if
-     * the {@link SingletonNode#classType} is equals to the current {@code classType}
-     * value of this object.
+     * the {@link SingletonNode#getNodeClassType()} is equals to the current
+     * {@code classType} value of this object.
+     *
+     * @since 1.0.0
      *
      **/
     @Override
@@ -128,7 +153,7 @@ public class SingletonNode implements AbstractNode {
         if (obj == this)
             return true;
         else if (obj instanceof SingletonNode singletonNode) {
-            return singletonNode.getNodeClassType().equals(this.classType);
+            return singletonNode.getNodeClassType().equals(this.getNodeClassType());
         }
         return false;
     }

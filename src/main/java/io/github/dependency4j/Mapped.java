@@ -5,7 +5,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target(ElementType.TYPE)
+@Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-@Managed(disposable = false, dynamic = true)
-@interface InternalDynamicallyManaged { }
+public @interface Mapped {
+
+    String value();
+}
