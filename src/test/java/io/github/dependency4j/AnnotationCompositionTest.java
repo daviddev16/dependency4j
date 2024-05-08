@@ -1,6 +1,7 @@
 package io.github.dependency4j;
 
 import io.github.dependency4j.example.composition.CompositionEnvironment;
+import io.github.dependency4j.example.composition.DynamicService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,7 @@ public class AnnotationCompositionTest {
     }
 
     @Test
-    @DisplayName("Annotation Composition: @ManagedInProduction Test")
+    @DisplayName("Annotation Composition: @ManagedInProduction Test 2")
     void productionEnvironmentConfigurationTest()
     {
         DependencyManager dependencyManager = DependencyManager.builder()
@@ -38,6 +39,7 @@ public class AnnotationCompositionTest {
 
         Assertions.assertNotNull(compositionEnvironment);
         Assertions.assertEquals(compositionEnvironment.helloComposition(), "Production");
+        Assertions.assertNull(dependencyManager.query(DynamicService.class));
     }
 
     @Test

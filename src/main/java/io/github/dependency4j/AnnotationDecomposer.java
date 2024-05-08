@@ -18,13 +18,10 @@ public final class AnnotationDecomposer {
     public static <R, T extends Annotation> R decomposeProperty(String propertyName, T annotation) {
         Class<?> annotationClassType = annotation.annotationType();
         Method equivalentMethod = findMappedEquivalentMethod(propertyName, annotationClassType);
-
         if (equivalentMethod != null) {
             Mapped mappedAnnotation = equivalentMethod.getAnnotation(Mapped.class);
-
             if (propertyName.equals(mappedAnnotation.value()))
                 return (R) safeAnnotationMethodInvocation(equivalentMethod, annotation);
-
         }
         final int dotIndex = propertyName.indexOf(".");
 
