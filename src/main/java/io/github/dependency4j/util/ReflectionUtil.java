@@ -1,34 +1,12 @@
 package io.github.dependency4j.util;
 
-import io.github.dependency4j.Managed;
 import io.github.dependency4j.Virtual;
 
 import java.lang.reflect.Method;
 import java.util.function.Consumer;
 
 public final class ReflectionUtil {
-
-    /**
-     *
-     * Used to retrieve a valid non-null name for the dependency object SingletonNode.
-     *
-     * @param dependencyClassType The managed class type to be inserted to the search tree.
-     *
-     * @since 1.0
-     *
-     **/
-    public static String coalesceClassName(Class<?> dependencyClassType) {
-
-        Managed managedAnnotation = dependencyClassType.getAnnotation(Managed.class);
-        String managedAnnotationDefinedName = "";
-
-        if (managedAnnotation != null)
-            managedAnnotationDefinedName = managedAnnotation.name();
-
-        return !StrUtil.isNullOrBlank(managedAnnotationDefinedName) ?
-                managedAnnotationDefinedName : dependencyClassType.getSimpleName();
-    }
-
+    
     public static void consumeAllVirtualMethodsFromClassType(Class<?> parentClassType,
                                                              Consumer<Method> virtualMethodConsumer) {
 
@@ -42,6 +20,11 @@ public final class ReflectionUtil {
 
             virtualMethodConsumer.accept(virtualMethod);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T defaultValueWhenNull(Class<T> classType, T current) {
+        return (current == null) ? (T) defaultValueToClassType(classType) : current;
     }
 
     public static Object defaultValueToClassType(Class<?> classType) {

@@ -40,4 +40,20 @@ public class AnnotationCompositionTest {
         Assertions.assertEquals(compositionEnvironment.helloComposition(), "Production");
     }
 
+    @Test
+    @DisplayName("Annotation Composition: Mapped Property Customization")
+    void productionEnvironmentConfiguration2Test()
+    {
+        DependencyManager dependencyManager = DependencyManager.builder()
+                .strategy("QA_Prototype", "QA_Prototype2")
+                .installPackage("io.github.dependency4j.example.composition")
+                .getDependencyManager();
+
+        CompositionEnvironment compositionEnvironment = dependencyManager
+                .query(CompositionEnvironment.class);
+
+        Assertions.assertNotNull(compositionEnvironment);
+        Assertions.assertEquals(compositionEnvironment.helloComposition(), "QAPrototypeEnvController");
+    }
+
 }

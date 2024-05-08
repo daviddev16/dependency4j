@@ -14,13 +14,12 @@ import java.util.stream.Collectors;
 
 /**
  *
- * <b>DependencySearchTree</b> is a specific Tree structure responsible for
- * storing data of java class and interface hierarchy. The tree is used
- * for searching and matching class types to their respective singleton
- * instances.
+ * <b>DependencySearchTree</b> is a specific Tree structure responsible for storing data of
+ * java class and interface hierarchy. The tree is used for searching and matching class types
+ * to their respective singleton instances.
  *
  * @author daviddev16
- * @version 1.0
+ * @version 1.0.8
  *
  **/
 public final class DependencySearchTree {
@@ -33,24 +32,22 @@ public final class DependencySearchTree {
 
     /**
      *
-     * This function inserts the dependency class type into the tree structure, ensuring
-     * compatibility by verifying if the class type is annotated with {@link Managed}.
+     * This function inserts the wrapped class type of the {@link TypeInformationHolder} into
+     * the tree structure, ensuring compatibility by verifying if the class type is annotated
+     * with {@link Managed}.
      *
-     * @param dependencyClassType The managed class type that is going to be used in dependency
-     *                            injection. Will be inserted to the dependency search tree.
+     * @param typeInformationHolder The {@link TypeInformationHolder} wraps the dependency
+     *                              class type that will receive a new {@link SingletonNode}.
      *
      * @throws NullPointerException if the dependencyClassType passed is null or the class type
      *                              is not annotated with {@link Managed}.
      *
-     * @since 1.0
+     * @since 1.0.8
      *
      **/
-    public void insert(final Class<?> dependencyClassType) {
-
-        Checks.nonNull(dependencyClassType, "Could not insert a null dependency " +
-                "object in the Dependency Search Tree.");
-
-        createTypeFamiliesInSearchTree(dependencyClassType);
+    public void insert(TypeInformationHolder typeInformationHolder) {
+        Checks.nonNull(typeInformationHolder, "typeInformationHolder must be specified.");
+        createTypeFamiliesInSearchTree(typeInformationHolder);
     }
 
     /**
@@ -69,7 +66,10 @@ public final class DependencySearchTree {
      *
      **/
     public void insertPropagation(final Class<?> dependencyClassType, Object nodeInstance) {
-        insert(dependencyClassType);
+        TypeInformationHolder typeInformationHolder = TypeInformationHolderFactory
+                .createTypeInformation(dependencyClassType);
+
+        insert(typeInformationHolder);
         propagateSingletonInstanceToNodes(dependencyClassType, nodeInstance);
     }
 
@@ -86,10 +86,11 @@ public final class DependencySearchTree {
      * "{@code Set<Class<?>>}" that contains the B interface. It is ordered by the very
      * first interface parent.
      * <p>
-     * This is a convenient function used by {@link #insert(Class)} function.
+     * This is a convenient function used by {@link #insert(TypeInformationHolder)}
+     * function.
      *
-     * @param dependencyClassType The dependency class type that will receive a new
-     *                            {@link SingletonNode}.
+     * @param typeInformationHolder The {@link TypeInformationHolder} wraps the dependency
+     *                              class type that will receive a new {@link SingletonNode}.
      *
      * @see DependencySearchTree#createInterfaceTreeMapping(Class)
      * @see DependencySearchTree#createSuperclassTreeMapping(Class)
@@ -97,8 +98,8 @@ public final class DependencySearchTree {
      * @since 1.0
      *
      **/
-    private void createTypeFamiliesInSearchTree(Class<?> dependencyClassType) {
-        createTypeFamiliesInSearchTree(new SingletonNode(dependencyClassType));
+    private void createTypeFamiliesInSearchTree(TypeInformationHolder typeInformationHolder) {
+        createTypeFamiliesInSearchTree(new SingletonNode(typeInformationHolder));
     }
 
     /**
@@ -123,25 +124,27 @@ public final class DependencySearchTree {
      *
      **/
     private void createTypeFamiliesInSearchTree(SingletonNode singletonNode) {
+        TypeInformationHolder typeInformationHolder =
+                singletonNode.getTypeInformationHolder();
 
-        Class<?> dependencyClassType = singletonNode.getNodeClassType();
+        Class<?> dependencyClassType = typeInformationHolder.getWrappedClassType();
 
-        Map<Class<?>, Set<Class<?>>> interfacesTreeMapping = createInterfaceTreeMapping(dependencyClassType);
+        Map<Class<?>, Set<Class<?>>> interfacesTreeMapping =
+                createInterfaceTreeMapping(dependencyClassType);
 
         /* it should add the dependency class to the root node if no interface is implemented */
         if (interfacesTreeMapping.isEmpty())
             rootNode.addChildNode(singletonNode);
 
-        appendClassTypesInSearchTree(interfacesTreeMapping, dependencyClassType);
+        appendClassTypesInSearchTree(interfacesTreeMapping, typeInformationHolder);
 
         if (!dependencyClassType.isInterface()) {
 
             final Map<Class<?>, Set<Class<?>>> superclassTreeMapping
                     = createSuperclassTreeMapping(dependencyClassType);
 
-            appendClassTypesInSearchTree(superclassTreeMapping, dependencyClassType);
+            appendClassTypesInSearchTree(superclassTreeMapping, typeInformationHolder);
         }
-
         createVirtualSingletonsInSearchTree(singletonNode);
     }
 
@@ -155,18 +158,19 @@ public final class DependencySearchTree {
      *
      * @param classTypesMapping The sub-interfaces & superclasses mapping of the
      *                          dependency class type.
-     * @param dependencyClassType The managed class type to be inserted to the search tree.
+     * @param typeInformationHolder The {@link TypeInformationHolder} wraps the dependency
+     *                              class type that will receive a new {@link SingletonNode}.
      *
-     * @see DependencySearchTree#appendToSearchTree(Set, Class)
+     * @see DependencySearchTree#appendToSearchTree(Set, TypeInformationHolder)
      *
      * @since 1.0
      *
      **/
     private void appendClassTypesInSearchTree(Map<Class<?>, Set<Class<?>>> classTypesMapping,
-                                              Class<?> dependencyClassType) {
-
+                                              TypeInformationHolder typeInformationHolder)
+    {
         for (Map.Entry<Class<?>, Set<Class<?>>> classEntries : classTypesMapping.entrySet())
-            appendToSearchTree(classEntries.getValue(), dependencyClassType);
+            appendToSearchTree(classEntries.getValue(), typeInformationHolder);
     }
 
     /**
@@ -198,18 +202,15 @@ public final class DependencySearchTree {
      *
      **/
     private Map<Class<?>, Set<Class<?>>> createInterfaceTreeMapping(Class<?> dependencyClassType) {
-
         Map<Class<?>, Set<Class<?>>> interfaceTreeMapping = new LinkedHashMap<>();
 
         for (Class<?> interfaceClassType : dependencyClassType.getInterfaces()) {
-
             Set<Class<?>> subInterfacesSet = new LinkedHashSet<>();
             generateSubInterfacePathSet(interfaceClassType, subInterfacesSet);
             subInterfacesSet.add(interfaceClassType);
 
             interfaceTreeMapping.put(interfaceClassType, subInterfacesSet);
         }
-
         return interfaceTreeMapping;
     }
 
@@ -226,8 +227,8 @@ public final class DependencySearchTree {
      * @since 1.0
      *
      **/
-    private void generateSubInterfacePathSet(Class<?> interfaceClassType, Set<Class<?>> subInterfacesSet) {
-
+    private void generateSubInterfacePathSet(Class<?> interfaceClassType, Set<Class<?>> subInterfacesSet)
+    {
         for (Class<?> childInterfaceClassType : interfaceClassType.getInterfaces()) {
             generateSubInterfacePathSet(childInterfaceClassType, subInterfacesSet);
             subInterfacesSet.add(childInterfaceClassType);
@@ -250,14 +251,10 @@ public final class DependencySearchTree {
      *
      **/
     private Map<Class<?>, Set<Class<?>>> createSuperclassTreeMapping(Class<?> dependencyClassType) {
-
         Map<Class<?>, Set<Class<?>>> superclassTreeMapping = new LinkedHashMap<>();
-
         Set<Class<?>> subSuperclassesSet = new LinkedHashSet<>();
         generateSuperclassPathSet(dependencyClassType, subSuperclassesSet);
-
         superclassTreeMapping.put(dependencyClassType, subSuperclassesSet);
-
         return superclassTreeMapping;
     }
 
@@ -276,11 +273,8 @@ public final class DependencySearchTree {
      * @since 1.0
      *
      **/
-    private void generateSuperclassPathSet(Class<?> dependencySuperclassClassType,
-                                           Set<Class<?>> subSuperclassesSet) {
-
+    private void generateSuperclassPathSet(Class<?> dependencySuperclassClassType, Set<Class<?>> subSuperclassesSet) {
         Class<?> superclassClassType = dependencySuperclassClassType.getSuperclass();
-
         /*
          * If superclassClassType is equals to Object.class, it means it is
          * the root of all java objects, and no longer need to go recursively.
@@ -298,21 +292,21 @@ public final class DependencySearchTree {
      * last element inserted it is the {@link SingletonNode} of {@code dependencyObject}.
      *
      * @param orderedClassType  The {@link Class} object of {@code dependencyObject}.
-     * @param dependencyClassType The managed class type to be inserted to the search tree.
+     * @param typeInformationHolder The {@link TypeInformationHolder} wraps the dependency
+     *                              class type that will receive a new {@link SingletonNode}.
      *
      * @see DependencySearchTree#createInterfaceTreeMapping(Class)
      *
      * @since 1.0
      *
      **/
-    private void appendToSearchTree(Set<Class<?>> orderedClassType, Class<?> dependencyClassType) {
-
+    private void appendToSearchTree(Set<Class<?>> orderedClassType, TypeInformationHolder typeInformationHolder) {
         AbstractNode parentNode = rootNode;
 
         for (Class<?> classType : orderedClassType)
             parentNode = findOrCreateJavaTypeNode(classType, parentNode);
 
-        parentNode.addChildNode(new SingletonNode(dependencyClassType));
+        parentNode.addChildNode(new SingletonNode(typeInformationHolder));
     }
 
     /**
@@ -328,14 +322,14 @@ public final class DependencySearchTree {
      *
      **/
     private void createVirtualSingletonsInSearchTree(SingletonNode parentSingletonNode) {
-
         Class<?> dependencyClassType = parentSingletonNode.getNodeClassType();
-
-        ReflectionUtil.consumeAllVirtualMethodsFromClassType(dependencyClassType, (virtualMethod) ->
-        {
+        ReflectionUtil.consumeAllVirtualMethodsFromClassType(dependencyClassType, (virtualMethod) -> {
             Class<?> virtualMethodClassType = virtualMethod.getReturnType();
 
-            createTypeFamiliesInSearchTree(new VirtualSingletonNode(virtualMethodClassType,
+            TypeInformationHolder typeInformationHolder = TypeInformationHolderFactory
+                    .createTypeInformation(virtualMethodClassType);
+
+            createTypeFamiliesInSearchTree(new VirtualSingletonNode(typeInformationHolder,
                     parentSingletonNode, virtualMethod));
         });
 
@@ -343,16 +337,17 @@ public final class DependencySearchTree {
 
     /**
      *
-     * This function is used internally by {@link DependencySearchTree#appendToSearchTree(Set, Class)}
-     * to find the {@link JavaTypeNode} relative to {@code parentNode} that has the same
-     * class type as the parameter {@code classType}. Returns null if no {@link JavaTypeNode}
-     * correspondent node exists in the tree.
+     * This function is used internally by
+     * {@link DependencySearchTree#appendToSearchTree(Set, TypeInformationHolder)} to find
+     * the {@link JavaTypeNode} relative to {@code parentNode} that has the same class type
+     * as the parameter {@code classType}. Returns null if no {@link JavaTypeNode} correspondent
+     * node exists in the tree.
      *
      * @param classType  The {@link Class} type used to find the {@link JavaTypeNode} in the tree.
      * @param parentNode The scanned node used to find the correspondent {@link JavaTypeNode}.
      *
      * @see DependencySearchTree#findOrCreateJavaTypeNode(Class, AbstractNode)
-     * @see DependencySearchTree#appendToSearchTree(Set, Class)
+     * @see DependencySearchTree#appendToSearchTree(Set, TypeInformationHolder)
      *
      * @since 1.0
      *
@@ -375,17 +370,17 @@ public final class DependencySearchTree {
 
     /**
      *
-     * This function is used internally by {@link DependencySearchTree#appendToSearchTree(Set, Class)}
-     * to find the {@link JavaTypeNode} relative to {@code parentNode} that has the same
-     * class type as the parameter {@code classType}. If there is no correspondent
-     * {@link JavaTypeNode}, a new node is created as a child of {@code parentNode}.
-     * The function should never return a null value.
+     * This function is used internally by
+     * {@link DependencySearchTree#appendToSearchTree(Set, TypeInformationHolder)} to find the
+     * {@link JavaTypeNode} relative to {@code parentNode} that has the same class type as the
+     * parameter {@code classType}. If there is no correspondent {@link JavaTypeNode}, a new node
+     * is created as a child of {@code parentNode}. The function should never return a null value.
      *
      * @param classType  The {@link Class} type used to find the {@link JavaTypeNode} in the tree.
      * @param parentNode The scanned node used to find the correspondent {@link JavaTypeNode}.
      *
      * @see DependencySearchTree#findJavaTypeNode(Class, AbstractNode)
-     * @see DependencySearchTree#appendToSearchTree(Set, Class)
+     * @see DependencySearchTree#appendToSearchTree(Set, TypeInformationHolder)
      *
      * @since 1.0
      *
@@ -424,7 +419,6 @@ public final class DependencySearchTree {
      **/
     @SuppressWarnings({"Unchecked"})
     public <T> T query(Class<? extends T> classType, QueryOptions queryOptions) {
-
         SingletonNode singletonNode = querySingletonNode(classType, queryOptions);
         return (singletonNode != null) ? (T) singletonNode.getNodeInstance() : null;
     }
@@ -447,7 +441,6 @@ public final class DependencySearchTree {
      *
      **/
     public SingletonNode querySingletonNode(Class<?> classType, QueryOptions queryOptions) {
-
         final String filteredClassName     = queryOptions.filteredClassName();
         final boolean hasFilteredClassName = !StrUtil.isNullOrBlank(filteredClassName);
 
@@ -463,7 +456,6 @@ public final class DependencySearchTree {
 
         for (SingletonNode singletonNode : matchResultSet) {
             lastMatchedSingletonNode = singletonNode;
-
             if (singletonNode.getNodeName().equals(filteredClassName))
                 return singletonNode;
         }
@@ -487,7 +479,6 @@ public final class DependencySearchTree {
      *
      **/
     public List<SingletonNode> querySingletonsByType(Class<?> classType) {
-
         final List<SingletonNode> matchResultList = new ArrayList<>();
         queryRecursivelySingletons(classType, rootNode, matchResultList);
         return matchResultList;
@@ -507,18 +498,15 @@ public final class DependencySearchTree {
      **/
     private void queryRecursivelySingletons(Class<?> classType,
                                             AbstractNode node, List<SingletonNode> matchResultSet) {
-
         for (AbstractNode childNode : node.children()) {
+            if (childNode instanceof JavaTypeNode javaTypeNode) {
 
-            if (childNode instanceof JavaTypeNode javaTypeNode)
-            {
                 if (!javaTypeNode.getNodeClassType().isAssignableFrom(classType))
                     continue;
 
                 queryRecursivelySingletons(classType, javaTypeNode, matchResultSet);
             }
             else if (childNode instanceof SingletonNode singletonNode) {
-
                 final Class<?> singletonClassType = singletonNode.getNodeClassType();
 
                 if (classType.isAssignableFrom(singletonClassType))
@@ -539,9 +527,7 @@ public final class DependencySearchTree {
      *
      **/
     public void propagateSingletonInstanceToNodes(Class<?> classType, Object nodeInstance) {
-
         Checks.nonNull(nodeInstance, "It is not allowed to propagate a null value through nodes.");
-
         querySingletonsByType(classType)
                 .forEach(singletonNode -> singletonNode.setNodeInstance(nodeInstance));
     }
@@ -553,10 +539,8 @@ public final class DependencySearchTree {
      *
      **/
     public Set<Object> queryAllInstances() {
-
         final List<SingletonNode> matchResultList = new ArrayList<>();
         queryRecursivelySingletons(Object.class, rootNode, matchResultList);
-
         return matchResultList.stream()
                 .filter(SingletonNode::hasSingletonInstance)
                 .map(SingletonNode::getNodeInstance)

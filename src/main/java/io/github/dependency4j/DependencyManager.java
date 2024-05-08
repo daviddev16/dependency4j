@@ -7,6 +7,7 @@ import io.github.dependency4j.exception.ReflectionStateException;
 import io.github.dependency4j.node.SingletonNode;
 import io.github.dependency4j.node.VirtualSingletonNode;
 import io.github.dependency4j.util.Checks;
+import io.github.dependency4j.util.D4JUtil;
 import io.github.dependency4j.util.ReflectionUtil;
 
 import java.lang.reflect.*;
@@ -27,13 +28,15 @@ import static java.lang.String.format;
  * an arbitrary package path. This class is responsible for finding and instantiating
  * classes annotated with {@link Managed} annotation. The class propagates the dependencies
  * through the instantiation of an object. It supports three types of dependency injection:
+ *
  * <pre>
  *  1. Constructor injection
  *  2. Method invocation injection
  *  3. Field injection
  * </pre>
+ *
  * @author daviddev16
- * @version 1.0
+ * @version 1.0.8
  *
  **/
 public @InternalDynamicallyManaged class DependencyManager implements QueryableProxy {
@@ -41,20 +44,16 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
     public static final String ANNOTATED_CONSTRUCTOR = "ANNOTATED";
     public static final String DEFAULT_CONSTRUCTOR   = "EMPTY/DEFAULT";
 
-    private final DependencySearchTree dependencySearchTree;
-    private final AnnotationDecomposer annotationDecomposer;
-
-    private final Set<String> strategies;
-
     private boolean enablePrimitiveDefaultValue = false;
+
+    private final DependencySearchTree dependencySearchTree;
+    private final Set<String> strategies;
 
     public static DependencyManagerChainBuilder builder() {
         return new DependencyManagerChainBuilder();
     }
 
-    public DependencyManager()
-    {
-        annotationDecomposer = new AnnotationDecomposer();
+    public DependencyManager() {
         dependencySearchTree = new DependencySearchTree();
         strategies           = new HashSet<>();
     }
@@ -107,16 +106,17 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
     public void installPackage(String packagePath, ClassLoader classLoader) {
         try {
             Checks.state(!isNullOrBlank(packagePath), "packageName must not be null or blank.");
-
-            Set<Class<?>> managedClassSet = ClassFinder.scanPackages(classLoader, packagePath)
+            Set<TypeInformationHolder> managedClassSet = ClassFinder.scanPackages(classLoader, packagePath)
                     .stream()
-                        .filter(classType -> annotationDecomposer
-                                .isAnnotationComposed(classType, Managed.class))
+                        .filter(classType -> AnnotationDecomposer.isAnnotationComposed(classType, Managed.class))
                         .filter(this::checkNonAbstractClassType)
-                        .filter(this::checkClassEligibility)
+                        .map(TypeInformationHolderFactory::createTypeInformation)
+                        .filter(this::checkTypeInformationHolderEligibility)
                     .collect(Collectors.toSet());
 
+            /* 1. insert all dependencies to tree */
             managedClassSet.forEach(dependencySearchTree::insert);
+            /* 2. create all dependencies instances */
             managedClassSet.forEach(this::instantiateWithInjection);
 
         } catch (Exception exception) {
@@ -154,17 +154,13 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
      *
      **/
     public <T> T installInstance(T instance, InstallationType installationType) {
-
         Checks.nonNull(instance, "object must not be null.");
         Checks.nonNull(installationType, "installationType must not be null.");
-
         performMethodAndFieldInjection(instance);
-
         if (installationType != InstallationType.STANDALONE) {
             dependencySearchTree.insertPropagation(instance.getClass(), instance);
             installVirtualMethodsToSingleInstance(instance);
         }
-
         return instance;
     }
 
@@ -183,16 +179,12 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
      *
      **/
     private void installVirtualMethodsToSingleInstance(Object instance) {
-
         Class<?> parentClassType = instance.getClass();
-
-        ReflectionUtil.consumeAllVirtualMethodsFromClassType(parentClassType, (virtualMethod) ->
-        {
+        ReflectionUtil.consumeAllVirtualMethodsFromClassType(parentClassType, (virtualMethod) -> {
             Class<?> virtualMethodReturnType = virtualMethod.getReturnType();
-
-            if (virtualMethodReturnType.isPrimitive())
+            if (virtualMethodReturnType.isPrimitive()) {
                 return;
-
+            }
             dependencySearchTree.propagateSingletonInstanceToNodes(virtualMethodReturnType,
                     invokeMethodWithInjection(instance, virtualMethod));
         });
@@ -258,12 +250,14 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
      *
      **/
     public <T> T installType(Class<T> classType, InstallationType installationType) {
-
         Checks.nonNull(classType, "classType must not be null.");
         Checks.nonNull(installationType, "installationType must not be null.");
 
+        TypeInformationHolder typeInformationHolder = TypeInformationHolderFactory
+                .createTypeInformation(classType);
+
         if (installationType != InstallationType.STANDALONE)
-            dependencySearchTree.insert(classType);
+            dependencySearchTree.insert(typeInformationHolder);
 
         return instantiateWithInjection(classType);
     }
@@ -333,7 +327,6 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
      **/
     @SuppressWarnings("Unchecked")
     private <T> T instantiateWithInjection(SingletonNode classTypeSingletonNode) {
-
         final Class<?> nodeClassType = classTypeSingletonNode.getNodeClassType();
 
         if (classTypeSingletonNode.getNodeInstance() != null)
@@ -341,7 +334,6 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
 
         try {
             Object newInstanceOfType;
-
             if (classTypeSingletonNode instanceof VirtualSingletonNode virtualSingletonNode)
                 newInstanceOfType =
                         handleVirtualSingletonClassInstantiation(virtualSingletonNode);
@@ -354,12 +346,49 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
 
             performMethodAndFieldInjection(newInstanceOfType);
             dependencySearchTree.propagateSingletonInstanceToNodes(nodeClassType, newInstanceOfType);
-
             return (T) newInstanceOfType;
 
         } catch (Exception exception) {
             throw new ClassCreationFailedException(nodeClassType, exception);
         }
+    }
+
+    /**
+     *
+     * The main core function of {@link DependencyManager}. This function starts the class type
+     * instantiation and dependency propagation through the constructor. Firstly, the function
+     * will try to find an already instantiated object for {@code classType}, if no instance is
+     * found, it will start creating the instance from scratch.
+     * <p>
+     * The function is only able to create constructors with more than one parameter if the
+     * constructor is annotated with {@link Pull}. If no constructor annotated is found, it will
+     * try to create with an empty constructor method.
+     * <p>
+     * After instantiation and constructor injection, a method and field injection will be
+     * performed in methods and fields annotated with {@link Pull} to the built instance.
+     * <p>
+     * All instances created by this function will be propagated to the {@link DependencySearchTree}.
+     * This is a convenient function to {@link #instantiateWithInjection(SingletonNode)}.
+     *
+     * @param typeInformationHolder The class type wrapper.
+     *
+     * @return A fully handled instance of {@code classType}.
+     *
+     * @throws ClassCreationFailedException May occur during instance creation and dependency
+     *                                      injection process. It will give a cause exception.
+
+     * @throws IllegalStateException        If the function could not instantiate any of the
+     *                                      class constructors.
+     *
+     * @see DependencyManager#installPackage(String)
+     * @see DependencyManager#installType(Class, InstallationType)
+     * @see DependencyManager#installType(Class)
+     *
+     * @since 1.0.8
+     *
+     **/
+    private <T> T instantiateWithInjection(TypeInformationHolder typeInformationHolder) {
+        return instantiateWithInjection(typeInformationHolder.getWrappedClassType());
     }
 
     /**
@@ -396,9 +425,8 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
      * @since 1.0.4
      *
      **/
-    @SuppressWarnings({"Unchecked"})
-    private <T> T instantiateWithInjection(Class<T> classType) {
-
+    @SuppressWarnings("unchecked")
+    private <T> T instantiateWithInjection(Class<?> classType) {
         Managed composedManagedAnnotation = decomposeManagedAnnotationFrom(classType);
 
         if (composedManagedAnnotation != null && composedManagedAnnotation.dynamic())
@@ -409,6 +437,7 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
 
         if (classTypeSingletonNode == null)
             return null;
+
         else if (classTypeSingletonNode.getNodeInstance() != null)
             return (T) classTypeSingletonNode.getNodeInstance();
 
@@ -437,7 +466,6 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
      *
      **/
     private Object handleSingletonClassInstantiation(Class<?> dependencyClassType) {
-
         Constructor<?> annotatedConstructor = getConstructorAnnotatedWithPull(dependencyClassType);
 
         if (annotatedConstructor != null)
@@ -492,18 +520,15 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
      *
      **/
     private Object handleVirtualSingletonClassInstantiation(VirtualSingletonNode virtualSingletonNode) {
-
         SingletonNode parentSingletonNode = virtualSingletonNode.getParentSingletionNode();
-
+        Class<?> parentClassType = parentSingletonNode.getNodeClassType();
         Object virtualizedObject = parentSingletonNode.getNodeInstance();
 
         if (virtualizedObject == null)
-            virtualizedObject = instantiateWithInjection(parentSingletonNode.getNodeClassType());
+            virtualizedObject = instantiateWithInjection(parentClassType);
 
         Checks.nonNull(virtualizedObject, "virtualized object failed to create.");
-
         Method virtualizedMethod = virtualSingletonNode.getVirtualMethod();
-
         return invokeMethodWithInjection(virtualizedObject, virtualizedMethod);
     }
 
@@ -584,7 +609,7 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
             else
                 return null;
 
-        Pull pullAnnotation = annotationDecomposer
+        Pull pullAnnotation = AnnotationDecomposer
                 .decomposeAnnotationFromMember(accessibleObject, Pull.class);
 
         final QueryOptions optionalQueryOptions = (pullAnnotation != null)
@@ -601,7 +626,6 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
         if (parentClassType.equals(singletonNode.getNodeClassType()))
             throw new IllegalStateException("\"" + parentClassType.getSimpleName() +
                     "\" loops itself on member: \"" + accessibleObject + "\".");
-
 
         Object instanceValue = singletonNode.getNodeInstance();
 
@@ -627,9 +651,7 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
      *
      * */
     private Object createInstanceWithAnnotatedConstructor(Constructor<?> annotatedConstructor) {
-
         final Class<?> classType = annotatedConstructor.getDeclaringClass();
-
         try {
             List<Object> listOfCreatedObjects =
                     createObjectsFromParameters(classType, annotatedConstructor,
@@ -640,7 +662,6 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
         catch (Exception exception) {
             handleConstructorInstantiationException(ANNOTATED_CONSTRUCTOR, classType, exception);
         }
-
         return null;
     }
 
@@ -666,7 +687,6 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
         try {
             Constructor<?>[] constructors = classType.getConstructors();
             Constructor<?> emptyConstructor = null;
-
             for (Constructor<?> constructor : constructors)
                 if (constructor.getParameterCount() == 0) {
                     emptyConstructor = constructor;
@@ -680,7 +700,6 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
         } catch (Exception exception) {
             handleConstructorInstantiationException(DEFAULT_CONSTRUCTOR, classType, exception);
         }
-
         return null;
     }
 
@@ -706,7 +725,6 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
      * */
     private void handleConstructorInstantiationException(String constructorType,
                                                          Class<?> classType, Exception exception) {
-
         String exceptionMessage;
         if (exception instanceof InvocationTargetException)
             exceptionMessage = format("The constructor of \"%s\" threw a error.", classType.getName());
@@ -718,7 +736,6 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
                     "constructor of \"%s\".", classType.getName());
 
         exceptionMessage = format("[Constructor type: %s] %s", constructorType, exceptionMessage);
-
         throw new ReflectionStateException(exceptionMessage, exception);
     }
 
@@ -740,16 +757,13 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
      *
      **/
     private void performFieldInjection(Object instance) {
-
         Class<?> parentClassType = instance.getClass();
-
         for (Field field : parentClassType.getDeclaredFields()) {
 
-            if (!annotationDecomposer.isAnnotationComposed(field, Pull.class))
+            if (!AnnotationDecomposer.isAnnotationComposed(field, Pull.class))
                 continue;
 
             Class<?> fieldClassType = field.getType();
-
             Object objectFromClassType =
                     fetchOrCreateObjectFromClassType(parentClassType, fieldClassType, field);
 
@@ -783,14 +797,11 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
      *
      **/
     private void performSetterMethodInvocationInjection(Object instance) {
-
         final Class<?> parentClassType = instance.getClass();
-
         for (Method method : parentClassType.getDeclaredMethods()) {
 
-            if (!annotationDecomposer.isAnnotationComposed(method, Pull.class) ||
-                    !method.getName().startsWith("set"))
-                continue;
+            if (!AnnotationDecomposer.isAnnotationComposed(method, Pull.class) ||
+                    !method.getName().startsWith("set")) continue;
 
             invokeMethodWithInjection(instance, method);
         }
@@ -814,15 +825,11 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
      *
      **/
     private Object invokeMethodWithInjection(Object instance, Method method) {
-
         final Class<?> parentClassType = instance.getClass();
-
         try {
             Parameter[] parameters = method.getParameters();
-
             List<Object> parameterValues =
                     createObjectsFromParameters(parentClassType, method, parameters);
-
             return method.invoke(instance, parameterValues.toArray());
 
         } catch (IllegalAccessException | InvocationTargetException cause) {
@@ -881,7 +888,7 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
 
     /**
      *
-     * Checks if a given class type can be instantiated and handled by the manager.
+     * Checks if a given class type wrapper can be instantiated and handled by the manager.
      * The eligibility options are:
      * <pre>
      * 1. It checks if the {@code dynamic} parameter of {@link Managed} is {@code true}.
@@ -899,41 +906,35 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
      * class must be instantiated anyway. It will return {@code true}.
      *</pre>
      *
-     * @param classType The class type to be checked.
+     * @param typeInformationHolder The class type properties holder.
      *
      * @return {@code true} if the class type match with the eligibility options.
      *
-     * @see Managed#dynamic()
-     * @see Managed#disposable()
-     * @see Managed#strategy()
+     * @see TypeInformationHolder#isDynamic()
+     * @see TypeInformationHolder#isDisposable()
+     * @see TypeInformationHolder#getStrategies()
      *
-     * @since 1.0
+     * @since 1.0.8
      *
      **/
-    private boolean checkClassEligibility(Class<?> classType) {
+    private boolean checkTypeInformationHolderEligibility(TypeInformationHolder typeInformationHolder) {
+        boolean flagInstanceAnyways = !typeInformationHolder.isDisposable();
 
-        Managed composedManagedAnnotation = decomposeManagedAnnotationFrom(classType);
-        boolean flagInstanceAnyways = !composedManagedAnnotation.disposable();
-
-        if (composedManagedAnnotation.dynamic())
+        if (typeInformationHolder.isDynamic())
             return false;
 
         /*
-         * if no strategy was defined, all managed classes
-         * should be instantiated.
+         * if no strategy was defined, all managed classes should be instantiated.
          */
         if (strategies.isEmpty())
             return true;
 
-        Strategy strategyAnn = composedManagedAnnotation.strategy();
-
-        for (String classStrategyName : strategyAnn.value()) {
+        for (String classStrategyName : typeInformationHolder.getStrategies()) {
             for (String strategyName : strategies) {
                 if (classStrategyName.equals(strategyName))
                     return true;
             }
         }
-
         return flagInstanceAnyways;
     }
 
@@ -1048,7 +1049,7 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
      *
      **/
     private Managed decomposeManagedAnnotationFrom(Class<?> classType) {
-        return annotationDecomposer
+        return AnnotationDecomposer
                 .decomposeAnnotationFromMember(classType, Managed.class);
     }
 
@@ -1063,7 +1064,4 @@ public @InternalDynamicallyManaged class DependencyManager implements QueryableP
         return strategies;
     }
 
-    public AnnotationDecomposer getAnnotationDecomposer() {
-        return annotationDecomposer;
-    }
 }

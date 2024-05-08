@@ -11,6 +11,8 @@ import io.github.dependency4j.DependencySearchTree;
  *
  * @author daviddev16
  *
+ * @since 1.0.0
+ *
  **/
 public final class JavaTypeNode extends BaseNode {
 
@@ -27,6 +29,8 @@ public final class JavaTypeNode extends BaseNode {
      * @return {@link NodeType#INTERFACE} if {@code nodeClassType} is flagged as
      *         {@link Class#isInterface()}. If it is not, than it will return
      *         {@link NodeType#SUPERCLASS}.
+     *
+     * @since 1.0.0
      **/
     @Override
     public NodeType getNodeType() {
@@ -36,8 +40,10 @@ public final class JavaTypeNode extends BaseNode {
 
     /**
      * This function returns a classType from an arbitrary hierarchy of an instance
-     * that is managed by {@link DependencyManager}. This is used
-     * for querying instances in the {@link DependencySearchTree}.
+     * that is managed by {@link DependencyManager}. This is used for querying instances
+     * in the {@link DependencySearchTree}.
+     *
+     * @since 1.0.0
      *
      **/
     public Class<?> getNodeClassType() {

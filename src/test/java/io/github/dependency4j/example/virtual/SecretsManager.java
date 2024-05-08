@@ -1,6 +1,5 @@
 package io.github.dependency4j.example.virtual;
 
-
 public class SecretsManager implements ISecret {
 
     private final String secretKey;

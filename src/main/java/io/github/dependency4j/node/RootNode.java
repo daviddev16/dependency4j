@@ -9,6 +9,8 @@ import io.github.dependency4j.*;
  *
  * @author daviddev16
  *
+ * @since 1.0.0
+ *
  **/
 public final class RootNode extends BaseNode {
 
@@ -17,6 +19,9 @@ public final class RootNode extends BaseNode {
      * {@inheritDoc}
      * <p>
      * This function will always return {@link NodeType#ROOT}.
+     *
+     * @since 1.0.0
+     *
      **/
     @Override
     public NodeType getNodeType() {
